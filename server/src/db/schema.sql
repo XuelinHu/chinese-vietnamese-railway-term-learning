@@ -1,0 +1,114 @@
+CREATE TABLE IF NOT EXISTS sys_role (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  code VARCHAR(40) NOT NULL UNIQUE,
+  name_zh VARCHAR(80) NOT NULL,
+  name_en VARCHAR(80) NOT NULL,
+  name_vi VARCHAR(80) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS sys_user (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  username VARCHAR(50) NOT NULL UNIQUE,
+  password_hash VARCHAR(120) NOT NULL,
+  real_name VARCHAR(80) NOT NULL,
+  email VARCHAR(120),
+  role_id INT NOT NULL,
+  status ENUM('enabled','disabled') DEFAULT 'enabled',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (role_id) REFERENCES sys_role(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS sys_login_log (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  username VARCHAR(50) NOT NULL,
+  ip VARCHAR(80),
+  user_agent VARCHAR(255),
+  success TINYINT(1) NOT NULL,
+  message VARCHAR(255),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS sys_operation_log (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT,
+  module VARCHAR(60) NOT NULL,
+  action VARCHAR(60) NOT NULL,
+  detail VARCHAR(500),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS term_category (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name_zh VARCHAR(100) NOT NULL,
+  name_en VARCHAR(100) NOT NULL,
+  name_vi VARCHAR(100) NOT NULL,
+  sort_order INT DEFAULT 0,
+  status ENUM('enabled','disabled') DEFAULT 'enabled',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS railway_term (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  category_id INT NOT NULL,
+  term_zh VARCHAR(160) NOT NULL,
+  term_en VARCHAR(160) NOT NULL,
+  term_vi VARCHAR(160) NOT NULL,
+  pinyin VARCHAR(200),
+  difficulty ENUM('easy','medium','hard') DEFAULT 'easy',
+  definition_zh TEXT,
+  definition_en TEXT,
+  definition_vi TEXT,
+  example_zh TEXT,
+  example_en TEXT,
+  example_vi TEXT,
+  status ENUM('enabled','disabled') DEFAULT 'enabled',
+  created_by INT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (category_id) REFERENCES term_category(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS practice_record (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  practice_type VARCHAR(40) NOT NULL,
+  category_id INT,
+  difficulty VARCHAR(20),
+  total_count INT NOT NULL,
+  correct_count INT NOT NULL,
+  score DECIMAL(5,2) NOT NULL,
+  duration_seconds INT DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS practice_answer (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  record_id BIGINT NOT NULL,
+  term_id INT NOT NULL,
+  question_type VARCHAR(40) NOT NULL,
+  question_text VARCHAR(255) NOT NULL,
+  user_answer VARCHAR(255),
+  correct_answer VARCHAR(255) NOT NULL,
+  is_correct TINYINT(1) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (record_id) REFERENCES practice_record(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS wrong_question (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  term_id INT NOT NULL,
+  wrong_count INT DEFAULT 1,
+  last_wrong_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_user_term (user_id, term_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS favorite_term (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  term_id INT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_fav (user_id, term_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
