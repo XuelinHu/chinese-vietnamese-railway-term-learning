@@ -1,0 +1,52 @@
+@startuml
+title 面向越南留学生的铁道专业汉越术语翻译学习软件认证与权限模块数据关系图
+skinparam defaultFontName "Noto Sans CJK SC"
+skinparam shadowing false
+skinparam backgroundColor white
+skinparam ArrowColor #3C5488
+skinparam ActorBorderColor #3C5488
+skinparam ActorFontColor #111827
+skinparam UsecaseBorderColor #0072B2
+skinparam UsecaseBackgroundColor #F8FBFF
+skinparam ComponentBorderColor #0072B2
+skinparam ComponentBackgroundColor #F8FBFF
+skinparam DatabaseBorderColor #009E73
+skinparam DatabaseBackgroundColor #F4FFF9
+skinparam SequenceLifeLineBorderColor #3C5488
+skinparam ParticipantBorderColor #0072B2
+skinparam ParticipantBackgroundColor #F8FBFF
+skinparam ActivityBorderColor #0072B2
+skinparam ActivityBackgroundColor #F8FBFF
+
+class "认证与权限模块请求参数" as Req {
+  +userId
+  +query
+  +payload
+}
+class "认证与权限模块响应结果" as Res {
+  +code
+  +message
+  +data
+}
+class "sys_user" as D0 {
+  +id
+  +业务字段
+  +时间字段
+}
+class "sys_role" as D1 {
+  +id
+  +业务字段
+  +时间字段
+}
+class "sys_login_log" as D2 {
+  +id
+  +业务字段
+  +时间字段
+}
+Req --> D0 : /api/auth/*
+Req --> D1 : /api/auth/*
+Req --> D2 : /api/auth/*
+D0 --> D1 : 统一登录、令牌签发、角色判断和密码修改
+D1 --> D2 : 统一登录、令牌签发、角色判断和密码修改
+D0 --> Res : 组装返回
+@enduml

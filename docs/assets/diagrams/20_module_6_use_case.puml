@@ -1,0 +1,38 @@
+@startuml
+title 面向越南留学生的铁道专业汉越术语翻译学习软件系统管理模块用例图
+skinparam defaultFontName "Noto Sans CJK SC"
+skinparam shadowing false
+skinparam backgroundColor white
+skinparam ArrowColor #3C5488
+skinparam ActorBorderColor #3C5488
+skinparam ActorFontColor #111827
+skinparam UsecaseBorderColor #0072B2
+skinparam UsecaseBackgroundColor #F8FBFF
+skinparam ComponentBorderColor #0072B2
+skinparam ComponentBackgroundColor #F8FBFF
+skinparam DatabaseBorderColor #009E73
+skinparam DatabaseBackgroundColor #F4FFF9
+skinparam SequenceLifeLineBorderColor #3C5488
+skinparam ParticipantBorderColor #0072B2
+skinparam ParticipantBackgroundColor #F8FBFF
+skinparam ActivityBorderColor #0072B2
+skinparam ActivityBackgroundColor #F8FBFF
+
+left to right direction
+actor "教师用户" as Teacher
+actor "管理员" as Admin
+rectangle "系统管理模块" {
+  usecase "用户" as UC6_0
+  usecase "角色" as UC6_1
+  usecase "登录日志和操作日志查询管理" as UC6_2
+  usecase "访问system/接口" as UC6_api
+}
+Teacher --> UC6_0
+Teacher --> UC6_1
+Teacher --> UC6_2
+Teacher --> UC6_api
+Admin --> UC6_0
+Admin --> UC6_1
+Admin --> UC6_2
+Admin --> UC6_api
+@enduml

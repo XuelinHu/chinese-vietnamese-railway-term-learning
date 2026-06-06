@@ -1,0 +1,41 @@
+@startuml
+title 面向越南留学生的铁道专业汉越术语翻译学习软件学习分析模块用例图
+skinparam defaultFontName "Noto Sans CJK SC"
+skinparam shadowing false
+skinparam backgroundColor white
+skinparam ArrowColor #3C5488
+skinparam ActorBorderColor #3C5488
+skinparam ActorFontColor #111827
+skinparam UsecaseBorderColor #0072B2
+skinparam UsecaseBackgroundColor #F8FBFF
+skinparam ComponentBorderColor #0072B2
+skinparam ComponentBackgroundColor #F8FBFF
+skinparam DatabaseBorderColor #009E73
+skinparam DatabaseBackgroundColor #F4FFF9
+skinparam SequenceLifeLineBorderColor #3C5488
+skinparam ParticipantBorderColor #0072B2
+skinparam ParticipantBackgroundColor #F8FBFF
+skinparam ActivityBorderColor #0072B2
+skinparam ActivityBackgroundColor #F8FBFF
+
+left to right direction
+actor "学生用户" as Student
+actor "管理员" as Admin
+rectangle "学习分析模块" {
+  usecase "练习统计" as UC5_0
+  usecase "正确率" as UC5_1
+  usecase "分类趋势" as UC5_2
+  usecase "错题统计和管理端汇总" as UC5_3
+  usecase "访问analysis/接口" as UC5_api
+}
+Student --> UC5_0
+Student --> UC5_1
+Student --> UC5_2
+Student --> UC5_3
+Student --> UC5_api
+Admin --> UC5_0
+Admin --> UC5_1
+Admin --> UC5_2
+Admin --> UC5_3
+Admin --> UC5_api
+@enduml

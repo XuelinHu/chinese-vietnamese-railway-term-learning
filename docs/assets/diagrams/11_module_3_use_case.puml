@@ -1,0 +1,51 @@
+@startuml
+title 面向越南留学生的铁道专业汉越术语翻译学习软件铁道术语模块用例图
+skinparam defaultFontName "Noto Sans CJK SC"
+skinparam shadowing false
+skinparam backgroundColor white
+skinparam ArrowColor #3C5488
+skinparam ActorBorderColor #3C5488
+skinparam ActorFontColor #111827
+skinparam UsecaseBorderColor #0072B2
+skinparam UsecaseBackgroundColor #F8FBFF
+skinparam ComponentBorderColor #0072B2
+skinparam ComponentBackgroundColor #F8FBFF
+skinparam DatabaseBorderColor #009E73
+skinparam DatabaseBackgroundColor #F4FFF9
+skinparam SequenceLifeLineBorderColor #3C5488
+skinparam ParticipantBorderColor #0072B2
+skinparam ParticipantBackgroundColor #F8FBFF
+skinparam ActivityBorderColor #0072B2
+skinparam ActivityBackgroundColor #F8FBFF
+
+left to right direction
+actor "学生用户" as Student
+actor "教师用户" as Teacher
+actor "管理员" as Admin
+rectangle "铁道术语模块" {
+  usecase "汉越英术语查询" as UC3_0
+  usecase "分页" as UC3_1
+  usecase "检索" as UC3_2
+  usecase "收藏" as UC3_3
+  usecase "新增和编辑" as UC3_4
+  usecase "访问terms" as UC3_api
+}
+Student --> UC3_0
+Student --> UC3_1
+Student --> UC3_2
+Student --> UC3_3
+Student --> UC3_4
+Student --> UC3_api
+Teacher --> UC3_0
+Teacher --> UC3_1
+Teacher --> UC3_2
+Teacher --> UC3_3
+Teacher --> UC3_4
+Teacher --> UC3_api
+Admin --> UC3_0
+Admin --> UC3_1
+Admin --> UC3_2
+Admin --> UC3_3
+Admin --> UC3_4
+Admin --> UC3_api
+@enduml

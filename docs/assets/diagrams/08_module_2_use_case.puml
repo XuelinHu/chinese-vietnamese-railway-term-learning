@@ -1,0 +1,43 @@
+@startuml
+title 面向越南留学生的铁道专业汉越术语翻译学习软件术语分类模块用例图
+skinparam defaultFontName "Noto Sans CJK SC"
+skinparam shadowing false
+skinparam backgroundColor white
+skinparam ArrowColor #3C5488
+skinparam ActorBorderColor #3C5488
+skinparam ActorFontColor #111827
+skinparam UsecaseBorderColor #0072B2
+skinparam UsecaseBackgroundColor #F8FBFF
+skinparam ComponentBorderColor #0072B2
+skinparam ComponentBackgroundColor #F8FBFF
+skinparam DatabaseBorderColor #009E73
+skinparam DatabaseBackgroundColor #F4FFF9
+skinparam SequenceLifeLineBorderColor #3C5488
+skinparam ParticipantBorderColor #0072B2
+skinparam ParticipantBackgroundColor #F8FBFF
+skinparam ActivityBorderColor #0072B2
+skinparam ActivityBackgroundColor #F8FBFF
+
+left to right direction
+actor "学生用户" as Student
+actor "教师用户" as Teacher
+actor "管理员" as Admin
+rectangle "术语分类模块" {
+  usecase "术语分类查询" as UC2_0
+  usecase "新增" as UC2_1
+  usecase "编辑和删除" as UC2_2
+  usecase "访问terms/categories" as UC2_api
+}
+Student --> UC2_0
+Student --> UC2_1
+Student --> UC2_2
+Student --> UC2_api
+Teacher --> UC2_0
+Teacher --> UC2_1
+Teacher --> UC2_2
+Teacher --> UC2_api
+Admin --> UC2_0
+Admin --> UC2_1
+Admin --> UC2_2
+Admin --> UC2_api
+@enduml

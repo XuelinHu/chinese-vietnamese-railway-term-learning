@@ -1,0 +1,35 @@
+@startuml
+title 面向越南留学生的铁道专业汉越术语翻译学习软件练习测评模块用例图
+skinparam defaultFontName "Noto Sans CJK SC"
+skinparam shadowing false
+skinparam backgroundColor white
+skinparam ArrowColor #3C5488
+skinparam ActorBorderColor #3C5488
+skinparam ActorFontColor #111827
+skinparam UsecaseBorderColor #0072B2
+skinparam UsecaseBackgroundColor #F8FBFF
+skinparam ComponentBorderColor #0072B2
+skinparam ComponentBackgroundColor #F8FBFF
+skinparam DatabaseBorderColor #009E73
+skinparam DatabaseBackgroundColor #F4FFF9
+skinparam SequenceLifeLineBorderColor #3C5488
+skinparam ParticipantBorderColor #0072B2
+skinparam ParticipantBackgroundColor #F8FBFF
+skinparam ActivityBorderColor #0072B2
+skinparam ActivityBackgroundColor #F8FBFF
+
+left to right direction
+actor "学生用户" as Student
+rectangle "练习测评模块" {
+  usecase "选择题" as UC4_0
+  usecase "判断题" as UC4_1
+  usecase "填空题" as UC4_2
+  usecase "翻译题出题和提交判分" as UC4_3
+  usecase "访问practice/接口" as UC4_api
+}
+Student --> UC4_0
+Student --> UC4_1
+Student --> UC4_2
+Student --> UC4_3
+Student --> UC4_api
+@enduml
