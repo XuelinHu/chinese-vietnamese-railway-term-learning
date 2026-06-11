@@ -1,5 +1,13 @@
 # chinese-vietnamese-railway-term-learning
 
+<p align="center">
+  <img height="20" alt="Vue 3.5.13" src="https://img.shields.io/badge/vue-3.5.13-4FC08D" />
+  <img height="20" alt="Vite 6.0.7" src="https://img.shields.io/badge/vite-6.0.7-646CFF" />
+  <img height="20" alt="Express 4.21.2" src="https://img.shields.io/badge/express-4.21.2-000000" />
+  <img height="20" alt="MySQL configured" src="https://img.shields.io/badge/mysql-configured-4479A1" />
+  <img height="20" alt="License GPL-2.0" src="https://img.shields.io/badge/license-GPL--2.0-3DA639" />
+</p>
+
 面向越南留学生的铁道专业汉越术语翻译学习软件 V1.0
 
 H5 前端 + Node.js 后台 + MySQL 数据库的铁道专业术语翻译学习平台。
