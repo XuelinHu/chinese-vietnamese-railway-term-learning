@@ -6,9 +6,11 @@
   "description": "面向越南留学生的铁道专业汉越术语翻译学习软件 V1.0",
   "scripts": {
     "dev": "concurrently \"npm run dev --workspace server\" \"npm run dev --workspace client\"",
+    "dev:ai": "bash server/ai/start.sh",
     "build": "npm run build --workspace client",
     "start": "npm run start --workspace server",
-    "install:all": "npm install --workspaces"
+    "install:all": "npm install --workspaces",
+    "smoke": "node server/scripts/smoke-test.js"
   },
   "workspaces": [
     "client",

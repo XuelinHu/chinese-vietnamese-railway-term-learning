@@ -1,0 +1,16 @@
+# AI 边车依赖。建议用 uv 建独立环境安装（见 README.md）。
+
+fastapi>=0.115
+uvicorn[standard]>=0.32
+
+# ASR：faster-whisper 自带 PyAV 解码，无需系统安装 ffmpeg
+faster-whisper>=1.1.0
+
+# CUDA 运行库。ctranslate2 的轮子不带 CUDA 库，且只认 CUDA 12 的 SONAME
+# （libcublas.so.12）。若本机只装了 CUDA 13 的 pip 库，缺这两行会导致
+# GPU 初始化直接失败（不是干净回退 CPU）。纯 CPU 运行可去掉。
+nvidia-cublas-cu12
+nvidia-cudnn-cu12
+
+# TTS：必须 >= 7.2.8。2026-01 起微软收紧鉴权，旧版本会大面积 403 握手中断。
+edge-tts>=7.2.8
