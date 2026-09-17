@@ -7,9 +7,9 @@
 
 ## Runtime
 
-- Frontend port: `5173` from `client/vite.config.js`.
-- Backend port: `3000` from `server/.env.example` `PORT`.
-- Frontend proxy: `/api -> http://localhost:3000`.
+- Frontend port: `4026` from `client/vite.config.js`.
+- Backend port: `8031` from `server/.env.example` `PORT`.
+- Frontend proxy: `/api -> http://localhost:8031`.
 - Start all: `npm install && npm run dev`.
 - Build frontend: `npm run build`.
 

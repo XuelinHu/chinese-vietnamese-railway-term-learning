@@ -42,8 +42,8 @@ npm install
 npm run dev
 ```
 
-- 前端：http://localhost:5173
-- 后端：http://localhost:3000
+- 前端：http://localhost:4026
+- 后端：http://localhost:8031
 
 演示账号：
 

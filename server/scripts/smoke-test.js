@@ -1,4 +1,4 @@
-const BASE_URL = process.env.BASE_URL || 'http://localhost:3000/api';
+const BASE_URL = process.env.BASE_URL || 'http://localhost:8031/api';
 
 async function http(path, options = {}, token = '') {
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
