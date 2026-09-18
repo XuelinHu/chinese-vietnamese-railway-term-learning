@@ -4,3 +4,5 @@ dist/
 *.log
 .DS_Store
 .tmp/
+# 本地 Claude Code 配置
+.claude/

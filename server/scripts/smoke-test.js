@@ -370,7 +370,16 @@ async function main() {
   assert(models.models.length > 0, 'agent model catalog is empty — run npm run db:init --workspace server');
 
   if (agentHealth.llm.available) {
-    const target = models.models.find((m) => m.installed) || models.models[0];
+    // 对话测试默认挑最小模型：0.5b 冷启动一两秒，不跟正在跑的业务抢显存，
+    // 也不会因为 14b 被别人挤掉而把加载失败误报成流式缺陷。
+    // 要覆盖大模型路径时，用 SMOKE_CHAT_MODEL=qwen3:14b 再跑一次。
+    const preferred = process.env.SMOKE_CHAT_MODEL;
+    const target =
+      (preferred && models.models.find((m) => m.name === preferred)) ||
+      models.models.find((m) => m.name === 'qwen2.5:0.5b' && m.installed) ||
+      models.models.find((m) => m.installed) ||
+      models.models[0];
+    console.log(`  · chat smoke using model: ${target.name}`);
     const events = await sseCollect('/agent/chat', {
       model: target.name,
       message: '用一句话说明什么是道岔。',
