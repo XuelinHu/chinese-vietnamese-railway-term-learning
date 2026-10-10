@@ -5,6 +5,14 @@ export default defineConfig({
   plugins: [vue()],
   server: {
     port: 4026,
+    strictPort: true,
+    proxy: {
+      '/api': 'http://localhost:8031'
+    }
+  },
+  preview: {
+    port: 4026,
+    strictPort: true,
     proxy: {
       '/api': 'http://localhost:8031'
     }

@@ -120,3 +120,7 @@ npm run smoke        # 需要后端已启动；覆盖注册/改密/找回密码�
 ## 开源协议
 
 本项目使用 GNU General Public License v2.0（GPL-2.0）开源，详见 `LICENSE`。
+
+## 启动端口
+
+网页入口：4026；后台服务：8031、8090。完整启动约定见 [PORTS.md](./PORTS.md)。

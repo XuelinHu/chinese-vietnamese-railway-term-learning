@@ -54,3 +54,7 @@
 ## GitHub Commit Language
 
 - Use English for all GitHub commit messages and pull/push related commit notes.
+
+## Port allocation
+
+Web: 4026. API/services: 8031、8090. See `PORTS.md`; keep dev/preview ports fixed and fail on conflicts.
