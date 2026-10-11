@@ -6,7 +6,7 @@ dotenv.config();
 
 const isProduction = process.env.NODE_ENV === 'production';
 assertProductionConfig(process.env);
-assertDatabaseName(process.env.DB_NAME || 'railway_term_learning');
+assertDatabaseName(process.env.PGDATABASE || 'railway_term_learning');
 
 /** 读取整型环境变量并夹到合法区间，避免 NaN 流进 SQL（LIMIT 拼接处尤其危险）。 */
 const int = (value, fallback, min, max) => {
@@ -19,11 +19,13 @@ export const env = {
   isProduction,
   port: Number(process.env.PORT || 8031),
   db: {
-    host: process.env.DB_HOST || '127.0.0.1',
-    port: Number(process.env.DB_PORT || 3306),
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'railway_term_learning'
+    host: process.env.PGHOST || '127.0.0.1',
+    port: Number(process.env.PGPORT || 5432),
+    user: process.env.PGUSER || 'railway_term_learning_app',
+    password: process.env.PGPASSWORD || '',
+    database: process.env.PGDATABASE || 'railway_term_learning',
+    poolMax: int(process.env.PGPOOL_MAX, 10, 1, 50),
+    ssl: process.env.PGSSL === '1'
   },
   jwtSecret: process.env.JWT_SECRET || randomBytes(32).toString('hex'),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '8h',

@@ -4,13 +4,13 @@
   <img height="20" alt="Vue 3.5.13" src="https://img.shields.io/badge/vue-3.5.13-4FC08D" />
   <img height="20" alt="Vite 6.0.7" src="https://img.shields.io/badge/vite-6.0.7-646CFF" />
   <img height="20" alt="Express 4.21.2" src="https://img.shields.io/badge/express-4.21.2-000000" />
-  <img height="20" alt="MySQL configured" src="https://img.shields.io/badge/mysql-configured-4479A1" />
+  <img height="20" alt="PostgreSQL 18" src="https://img.shields.io/badge/PostgreSQL-18-4169E1" />
   <img height="20" alt="License GPL-2.0" src="https://img.shields.io/badge/license-GPL--2.0-3DA639" />
 </p>
 
 面向越南留学生的铁道专业汉越术语翻译学习软件 V1.0
 
-H5 前端 + Node.js 后台 + MySQL 数据库 + 本地大模型/语音边车的铁道专业术语翻译学习平台。
+H5 前端 + Node.js 后台 + PostgreSQL 数据库 + 本地大模型/语音边车的铁道专业术语翻译学习平台。
 
 ## 功能范围
 
@@ -37,7 +37,7 @@ H5 前端 + Node.js 后台 + MySQL 数据库 + 本地大模型/语音边车的�
         ├─ 语音播报  /api/agent/tts (edge-tts) → <audio>，降级 speechSynthesis
         └─ 语音对话  Android 原生桥 > 服务端 Whisper > Web Speech
               │
-Express :8031 ──┼── MySQL :3306
+Express :8031 ──┼── PostgreSQL :5432
                 ├── Ollama :11434   （/api/chat 流式、/api/tags、/api/pull）
                 └── AI 边车 :8090   （FastAPI：/asr faster-whisper、/tts edge-tts）
 ```
@@ -62,15 +62,21 @@ H5 应用由 Android WebView 承载，语音有两条路径：默认走 WebView 
 开发环境缺少 `JWT_SECRET` 时会为本次进程生成随机密钥，重启后旧 token 失效；生产环境必须显式配置。
 
 生产环境必须设置至少 16 位数据库密码、至少 32 位随机 `JWT_SECRET`，并配置 SMTP；缺少任一项后端会拒绝启动。
-生产环境不会自动创建 `admin/admin123` 等演示用户。首次部署时，通过受控的密钥注入设置 `ADMIN_USERNAME`（3-50 位字母/数字/点/下划线/连字符）和
+生产环境不会自动创建弱口令演示用户。首次部署时，通过受控的密钥注入设置 `ADMIN_USERNAME`（3-50 位字母/数字/点/下划线/连字符）和
 `ADMIN_PASSWORD`（至少 12 位），再于 server workspace 执行 `npm run admin:create`。该命令仅在当前库尚无管理员时成功，密码只存 bcrypt 哈希。
 
-开发/测试环境首次启动后端会自动创建数据表和演示数据。生产环境不播种演示账号；请先确保 MySQL 已启动，并配置专用数据库账号。
-Schema 版本记录在 `schema_migrations`。现有数据库首次升级会幂等登记 `001_initial_schema`；后续结构改动需追加新版本，不得改写已登记版本。迁移通过 MySQL advisory lock 串行执行，并校验 SHA-256 checksum。
+先由 PostgreSQL 管理员在目标实例运行 `server/src/db/postgres/provision-role.psql`，创建本项目专属数据库和受限运行角色；然后在 `server/.env` 设置 `PGHOST`、`PGPORT`、`PGUSER=railway_term_learning_app`、独立 `PGPASSWORD` 和 `PGDATABASE`。同名数据库若所有者不符，脚本会先停止，不自动改动其所有权。应用只连接配置的数据库，不会创建数据库，也不要求超级用户。Schema 基线位于 `server/src/db/postgres/schema.sql`，版本记录在 `schema_migrations`；后续结构改动应新增不可变迁移。迁移通过 PostgreSQL advisory lock 串行执行，并校验 SHA-256 checksum。Windows 本机 PostgreSQL 18 示例：
+
+```powershell
+$pgAdmin = Read-Host 'PostgreSQL 管理员角色'
+& 'C:\Program Files\PostgreSQL\18\bin\psql.exe' -h 127.0.0.1 -p 5432 -U $pgAdmin -d postgres -f server/src/db/postgres/provision-role.psql
+```
+
+弱口令演示账号仅可在隔离测试库显式开启：`PGDATABASE` 必须以 `_test` 结尾且 `ALLOW_DEMO_SEED=1`。开发/生产库不会自动播种演示账号。测试初始化后运行 `npm run db:init --workspace server`，再运行 `npm run seed:test-data --workspace server` 填充分页样例。
 
 ### 数据库备份与恢复
 
-后端提供 MySQL 一致性快照，使用 gzip + AES-256-GCM 加密；需在 `server/.env` 配置独立 `DB_BACKUP_ENCRYPTION_KEY`（32 字节，即 64 位十六进制），密钥必须保存在密码管理器和本机 `.env`，不能提交或丢失。备份默认写入 `server/backups/`，不会覆盖已有文件。快照绑定汉越铁路项目标识，不能作为其他项目的恢复源。
+后端使用 PostgreSQL `pg_dump` custom archive 并以 AES-256-GCM 加密；需在 `server/.env` 配置独立 `DB_BACKUP_ENCRYPTION_KEY`（32 字节，即 64 位十六进制），密钥必须保存在密码管理器和本机 `.env`，不能提交。备份默认写入 `server/backups/`，不会覆盖已有文件。快照绑定汉越铁路项目标识，不能作为其他项目的恢复源。旧 `.rvlbak` MySQL 快照不属于 PostgreSQL archive，不能用新恢复工具直接还原。
 
 ```powershell
 cd server
@@ -78,12 +84,11 @@ node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"  #
 npm run db:backup
 ```
 
-恢复只允许 `DB_NAME` 以 `_test` 结尾，并要求显式 `--replace`；目标库必须先按相同版本完成 `db:init` 和迁移。建议先恢复到隔离测试库验证，再制定生产恢复操作。
+恢复必须指定与备份来源不同、名称以 `_test` 结尾的预建测试数据库，并显式加 `--replace`。此参数只允许清理该目标测试库中的对象；不会创建或删除数据库。建议先在隔离测试库核对数据，再另行规划生产恢复。
 
 ```powershell
 cd server
-$env:DB_NAME = 'railway_restore_test'
-npm run db:restore -- --source .\backups\snapshot.rvlbak --replace
+npm run db:restore -- --source .\backups\snapshot.pgbak --database railway_restore_test --replace
 ```
 
 ## 启动
@@ -98,11 +103,7 @@ npm run dev:ai       # 可选：语音边车 8090，不启动则语音降级到�
 - 后端：http://localhost:8031
 - 语音边车：http://127.0.0.1:8090（仅本机）
 
-演示账号：
-
-- 管理员：admin / admin123
-- 教师：teacher / teacher123
-- 学生：student / student123
+测试隔离库在 `ALLOW_DEMO_SEED=1` 时才播种演示账号 `admin/admin123`、`teacher/teacher123`、`student/student123`；不得在开发或生产库启用。
 
 ## 智能体依赖
 
@@ -136,7 +137,7 @@ HF_ENDPOINT=https://hf-mirror.com npm run dev:ai
 npm run smoke        # 需要后端已启动；覆盖注册/改密/找回密码全流程、13 个分页菜单、智能体 SSE
 ```
 
-冒烟测试会在数据库中注册/删除账号、写入练习与日志，并依赖预置的 `admin/admin123`。
+冒烟测试会在数据库中注册/删除账号、写入练习与日志，并依赖仅测试库提供的演示账号。
 请只对名称以 `_test` 结尾的隔离测试库启动后端并运行；不要连接日常或生产库。测试数据播种命令
 `npm run seed:test-data --workspace server` 也会写入大量分页样例数据。
 

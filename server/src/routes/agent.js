@@ -58,7 +58,7 @@ agentRouter.get('/health', asyncHandler(async (req, res) => {
 
 agentRouter.get('/models', asyncHandler(async (req, res) => {
   const [catalog, installed, running] = await Promise.all([
-    query('SELECT * FROM agent_model ORDER BY FIELD(tier, "recommended", "light", "advanced", "too_large"), id'),
+    query("SELECT * FROM agent_model ORDER BY CASE tier WHEN 'recommended' THEN 1 WHEN 'light' THEN 2 WHEN 'advanced' THEN 3 ELSE 4 END, id"),
     ollama.listModels().catch(() => []),
     ollama.listRunning()
   ]);
@@ -250,7 +250,7 @@ agentRouter.post('/chat', validateBody(chatSchema), asyncHandler(async (req, res
       if (answer) {
         await query(
           `INSERT INTO agent_message (session_id, role, content, model, tokens, duration_ms)
-           VALUES (:sessionId, "assistant", :content, :model, :tokens, :durationMs)`,
+           VALUES (:sessionId, 'assistant', :content, :model, :tokens, :durationMs)`,
           { sessionId, content: answer, model, tokens: evalCount, durationMs }
         );
       }
@@ -292,9 +292,9 @@ agentRouter.get('/sessions', asyncHandler(async (req, res) => {
   const model = req.query.model || null;
 
   const params = { userId, keyword: `%${keyword}%`, model, limit, offset };
-  const where = `WHERE (:userId IS NULL OR s.user_id = :userId)
-       AND (:model IS NULL OR s.model = :model)
-       AND (:keyword = '%%' OR s.title LIKE :keyword OR u.username LIKE :keyword)`;
+  const where = `WHERE (CAST(:userId AS integer) IS NULL OR s.user_id = :userId)
+       AND (CAST(:model AS text) IS NULL OR s.model = :model)
+       AND (:keyword = '%%' OR s.title ILIKE :keyword OR u.username ILIKE :keyword)`;
 
   const total = await query(
     `SELECT COUNT(*) AS count FROM agent_session s JOIN sys_user u ON u.id = s.user_id ${where}`,

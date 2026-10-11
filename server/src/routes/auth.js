@@ -31,7 +31,7 @@ const resetLimiter = rateLimit({
 });
 
 const usernameRule = z.string().trim().min(3, '用户名至少 3 个字符').max(50).regex(/^[A-Za-z0-9_.-]+$/, '用户名只能包含字母、数字、下划线、点和横线');
-const passwordRule = z.string().min(6, '密码至少 6 位').max(64, '密码最长 64 位');
+const passwordRule = z.string().min(12, '密码至少 12 位').max(64, '密码最长 64 位');
 
 const registerSchema = z.object({
   username: usernameRule,
@@ -226,7 +226,7 @@ authRouter.post('/forgot-password', resetLimiter, validateBody(forgotSchema), as
   const codeHash = await bcrypt.hash(code, 10);
   await query(
     `INSERT INTO sys_password_reset (user_id, username, email, code_hash, expires_at)
-     VALUES (:id, :username, :email, :codeHash, DATE_ADD(NOW(), INTERVAL :ttl MINUTE))`,
+     VALUES (:id, :username, :email, :codeHash, now() + (:ttl * INTERVAL '1 minute'))`,
     { id: user.id, username: user.username, email: user.email, codeHash, ttl: env.resetCodeTtlMinutes }
   );
 
@@ -257,7 +257,7 @@ authRouter.post('/reset-password', resetLimiter, validateBody(resetSchema), asyn
 
   const rows = await query(
     `SELECT * FROM sys_password_reset
-     WHERE username = :username AND used = 0 AND expires_at > NOW()
+     WHERE username = :username AND used = 0 AND expires_at > now()
      ORDER BY id DESC LIMIT 1`,
     { username }
   );

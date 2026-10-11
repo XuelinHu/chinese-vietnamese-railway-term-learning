@@ -1,43 +1,72 @@
-export async function applyMigrations({ pool, query, migrations, lockName }) {
-  await query(`CREATE TABLE IF NOT EXISTS schema_migrations (
-    version VARCHAR(64) PRIMARY KEY,
-    description VARCHAR(255) NOT NULL,
-    checksum CHAR(64) NOT NULL,
-    applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
+import { createHash } from 'node:crypto';
+import { readdir, readFile } from 'node:fs/promises';
+import { basename, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-  const connection = await pool.getConnection();
+const baselinePath = new URL('./postgres/schema.sql', import.meta.url);
+const migrationsPath = fileURLToPath(new URL('./postgres/migrations/', import.meta.url));
+
+async function loadMigrations() {
+  const migrations = [{
+    version: '001_initial_schema',
+    description: 'Initial PostgreSQL schema',
+    source: await readFile(baselinePath, 'utf8')
+  }];
+  const files = (await readdir(migrationsPath)).filter((file) => /^\d{3}_[a-z0-9_]+\.sql$/i.test(file)).sort();
+  for (const file of files) {
+    migrations.push({
+      version: basename(file, '.sql'),
+      description: basename(file, '.sql').replace(/^\d{3}_/, '').replaceAll('_', ' '),
+      source: await readFile(join(migrationsPath, file), 'utf8')
+    });
+  }
+  return migrations;
+}
+
+export async function applyMigrations({ pool, database }) {
+  const connection = await pool.connect();
   let locked = false;
   try {
-    const [lockRows] = await connection.query('SELECT GET_LOCK(?, 30) AS acquired', [lockName]);
-    if (Number(lockRows[0]?.acquired) !== 1) throw new Error('Timed out waiting for the database migration lock');
+    const lock = await connection.query(
+      "SELECT pg_try_advisory_lock(hashtext('railway-term-learning'), hashtext($1)) AS acquired",
+      [database]
+    );
+    if (!lock.rows[0]?.acquired) throw new Error('Timed out waiting for the PostgreSQL migration lock');
     locked = true;
 
-    const appliedRows = await query('SELECT version, checksum FROM schema_migrations');
-    const applied = new Map(appliedRows.map((row) => [row.version, row.checksum]));
+    await connection.query(`CREATE TABLE IF NOT EXISTS schema_migrations (
+      version VARCHAR(64) PRIMARY KEY,
+      description VARCHAR(255) NOT NULL,
+      checksum CHAR(64) NOT NULL,
+      applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )`);
+
+    const applied = await connection.query('SELECT version, checksum FROM schema_migrations');
+    const migrations = await loadMigrations();
     const knownVersions = new Set(migrations.map((migration) => migration.version));
-    const unknownVersion = [...applied.keys()].find((version) => !knownVersions.has(version));
-    if (unknownVersion) throw new Error(`Database contains unknown migration ${unknownVersion}`);
-    if (knownVersions.size !== migrations.length) throw new Error('Migration versions must be unique');
-
+    const unknownVersion = applied.rows.find((row) => !knownVersions.has(row.version));
+    if (unknownVersion) throw new Error(`Database contains unknown migration ${unknownVersion.version}`);
     for (const migration of migrations) {
-      const currentChecksum = applied.get(migration.version);
-      if (currentChecksum !== undefined) {
-        if (currentChecksum !== migration.checksum) {
-          throw new Error(`Migration checksum mismatch for ${migration.version}`);
-        }
-        continue;
+      const checksum = createHash('sha256').update(migration.source).digest('hex');
+      const existing = applied.rows.find((row) => row.version === migration.version);
+      if (existing && existing.checksum !== checksum) throw new Error(`Migration checksum mismatch for ${migration.version}`);
+      if (existing) continue;
+      await connection.query('BEGIN');
+      try {
+        await connection.query(migration.source);
+        await connection.query(
+          'INSERT INTO schema_migrations (version, description, checksum) VALUES ($1, $2, $3)',
+          [migration.version, migration.description, checksum]
+        );
+        await connection.query('COMMIT');
+      } catch (error) {
+        await connection.query('ROLLBACK').catch(() => {});
+        throw error;
       }
-
-      await migration.up(query);
-      await query(
-        'INSERT INTO schema_migrations (version, description, checksum) VALUES (:version, :description, :checksum)',
-        { version: migration.version, description: migration.description, checksum: migration.checksum }
-      );
     }
   } finally {
     try {
-      if (locked) await connection.query('SELECT RELEASE_LOCK(?)', [lockName]);
+      if (locked) await connection.query("SELECT pg_advisory_unlock(hashtext('railway-term-learning'), hashtext($1))", [database]);
     } finally {
       connection.release();
     }

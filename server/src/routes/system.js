@@ -23,10 +23,10 @@ systemRouter.get('/users', staff, asyncHandler(async (req, res) => {
   const status = req.query.status || null;
 
   const params = { keyword: `%${keyword}%`, roleId, status, limit, offset };
-  const where = `WHERE (:roleId IS NULL OR u.role_id = :roleId)
-       AND (:status IS NULL OR u.status = :status)
-       AND (:keyword = '%%' OR u.username LIKE :keyword OR u.real_name LIKE :keyword
-            OR u.email LIKE :keyword OR u.phone LIKE :keyword)`;
+  const where = `WHERE (CAST(:roleId AS integer) IS NULL OR u.role_id = :roleId)
+       AND (CAST(:status AS text) IS NULL OR u.status = :status)
+       AND (:keyword = '%%' OR u.username ILIKE :keyword OR u.real_name ILIKE :keyword
+            OR u.email ILIKE :keyword OR u.phone ILIKE :keyword)`;
 
   const total = await query(`SELECT COUNT(*) AS count FROM sys_user u ${where}`, params);
   const rows = await query(
@@ -42,7 +42,7 @@ systemRouter.get('/users', staff, asyncHandler(async (req, res) => {
 
 systemRouter.post('/users', adminOnly, validateBody(z.object({
   username: z.string().trim().min(3).max(50).regex(/^[A-Za-z0-9_.-]+$/, '用户名只能包含字母、数字、下划线、点和横线'),
-  password: z.string().min(6, '密码至少 6 位').max(64).optional().default('123456'),
+  password: z.string().min(12, '密码至少 12 位').max(64),
   realName: z.string().trim().min(1, '请填写真实姓名').max(80),
   email: z.string().trim().email('邮箱格式不正确').max(120).optional().or(z.literal('')),
   phone: z.string().trim().max(30).optional().default(''),
@@ -96,12 +96,12 @@ systemRouter.delete('/users/:id', adminOnly, asyncHandler(async (req, res) => {
 
 systemRouter.post('/users/:id/reset-password', adminOnly, asyncHandler(async (req, res) => {
   const id = Number(req.params.id);
-  const password = String(req.body?.password || '123456');
-  if (password.length < 6) return res.status(400).json({ message: '密码至少 6 位' });
+  const password = String(req.body?.password || '');
+  if (password.length < 12) return res.status(400).json({ message: '密码至少 12 位' });
   const hash = await bcrypt.hash(password, 10);
   await query('UPDATE sys_user SET password_hash = :hash WHERE id = :id', { hash, id });
   await logOperation({ req, module: 'system', action: 'reset-user-password', detail: `重置用户密码 id=${id}` });
-  res.json({ message: '密码已重置', password });
+  res.json({ message: '密码已重置' });
 }));
 
 /* ------------------------------ 角色管理 ------------------------------ */
@@ -110,7 +110,7 @@ systemRouter.get('/roles', staff, asyncHandler(async (req, res) => {
   const { page, pageSize, limit, offset } = getPagination(req.query);
   const keyword = (req.query.keyword || '').trim();
   const params = { keyword: `%${keyword}%` };
-  const where = `WHERE (:keyword = '%%' OR r.code LIKE :keyword OR r.name_zh LIKE :keyword OR r.name_en LIKE :keyword)`;
+  const where = `WHERE (:keyword = '%%' OR r.code ILIKE :keyword OR r.name_zh ILIKE :keyword OR r.name_en ILIKE :keyword)`;
 
   const total = await query(`SELECT COUNT(*) AS count FROM sys_role r ${where}`, params);
   const rows = await query(
@@ -187,7 +187,7 @@ systemRouter.put('/roles/:id/menus', adminOnly, asyncHandler(async (req, res) =>
 
   await query('DELETE FROM sys_role_menu WHERE role_id = :id', { id });
   for (const menuId of menuIds) {
-    await query('INSERT IGNORE INTO sys_role_menu (role_id, menu_id) VALUES (:id, :menuId)', { id, menuId });
+    await query('INSERT INTO sys_role_menu (role_id, menu_id) VALUES (:id, :menuId) ON CONFLICT (role_id, menu_id) DO NOTHING', { id, menuId });
   }
   await logOperation({ req, module: 'system', action: 'grant-role-menus', detail: `角色 id=${id} 授权 ${menuIds.length} 个菜单` });
   res.json({ message: 'ok', count: menuIds.length });
@@ -199,8 +199,8 @@ systemRouter.get('/menus', staff, asyncHandler(async (req, res) => {
   const { page, pageSize, limit, offset } = getPagination(req.query);
   const keyword = (req.query.keyword || '').trim();
   const params = { keyword: `%${keyword}%` };
-  const where = `WHERE (:keyword = '%%' OR m.code LIKE :keyword OR m.path LIKE :keyword
-       OR m.name_zh LIKE :keyword OR m.name_en LIKE :keyword OR m.name_vi LIKE :keyword)`;
+  const where = `WHERE (:keyword = '%%' OR m.code ILIKE :keyword OR m.path ILIKE :keyword
+       OR m.name_zh ILIKE :keyword OR m.name_en ILIKE :keyword OR m.name_vi ILIKE :keyword)`;
 
   const total = await query(`SELECT COUNT(*) AS count FROM sys_menu m ${where}`, params);
   const rows = await query(
@@ -287,8 +287,8 @@ systemRouter.get('/logs/login', staff, asyncHandler(async (req, res) => {
   const keyword = (req.query.keyword || '').trim();
   const success = req.query.success === '' || req.query.success === undefined ? null : Number(req.query.success);
   const params = { keyword: `%${keyword}%`, success, limit, offset };
-  const where = `WHERE (:success IS NULL OR success = :success)
-       AND (:keyword = '%%' OR username LIKE :keyword OR ip LIKE :keyword OR message LIKE :keyword)`;
+  const where = `WHERE (CAST(:success AS smallint) IS NULL OR success = :success)
+       AND (:keyword = '%%' OR username ILIKE :keyword OR ip ILIKE :keyword OR message ILIKE :keyword)`;
 
   const total = await query(`SELECT COUNT(*) AS count FROM sys_login_log ${where}`, params);
   const rows = await query(
@@ -303,9 +303,9 @@ systemRouter.get('/logs/operation', staff, asyncHandler(async (req, res) => {
   const keyword = (req.query.keyword || '').trim();
   const module = req.query.module || null;
   const params = { keyword: `%${keyword}%`, module, limit, offset };
-  const where = `WHERE (:module IS NULL OR module = :module)
-       AND (:keyword = '%%' OR username LIKE :keyword OR action LIKE :keyword
-            OR detail LIKE :keyword OR path LIKE :keyword)`;
+  const where = `WHERE (CAST(:module AS text) IS NULL OR module = :module)
+       AND (:keyword = '%%' OR username ILIKE :keyword OR action ILIKE :keyword
+            OR detail ILIKE :keyword OR path ILIKE :keyword)`;
 
   const total = await query(`SELECT COUNT(*) AS count FROM sys_operation_log ${where}`, params);
   const rows = await query(

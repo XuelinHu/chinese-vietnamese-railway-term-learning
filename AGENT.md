@@ -3,7 +3,7 @@
 ## Project
 
 - Project: `chinese-vietnamese-railway-term-learning`
-- Stack: Vue 3 + Vite frontend, Node.js + Express backend, MySQL
+- Stack: Vue 3 + Vite frontend, Node.js + Express backend, PostgreSQL
 
 ## Runtime
 
@@ -17,16 +17,15 @@
 
 ## Database
 
-- Type: MySQL.
+- Type: PostgreSQL.
 - Database name: `railway_term_learning`.
 - Env file: `server/.env` based on `server/.env.example`.
-- Variables: `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `JWT_SECRET`, `JWT_EXPIRES_IN`,
+- Variables: `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`, `PGPOOL_MAX`, `PGSSL`, `JWT_SECRET`, `JWT_EXPIRES_IN`,
   `OLLAMA_*`, `AI_SIDECAR_*`, `ASR_*`, `SMTP_*`, `RESET_CODE_TTL_MINUTES`.
 - Keep real passwords only in local `.env`; do not commit credentials.
-- Schema changes on an existing database must go through `ensureColumn()` in `server/src/db/init.js` —
-  `CREATE TABLE IF NOT EXISTS` cannot add columns, and MySQL 8.4 has no `ADD COLUMN IF NOT EXISTS`.
-- Schema versions are tracked in `schema_migrations`; append a new immutable migration in `server/src/db/init.js`
-  for future changes. The runner uses a MySQL advisory lock and rejects checksum drift.
+- The database must be provisioned before startup; the application never creates a database.
+- Canonical schema is `server/src/db/postgres/schema.sql`; migration history is checksum-verified in `schema_migrations` under a PostgreSQL advisory lock.
+- Weak demo accounts and bulk test data require a `_test` database and explicit `ALLOW_DEMO_SEED=1`.
 
 ## External services
 
@@ -44,11 +43,10 @@
 
 ## Codex Notes
 
-- Backend auto-creates tables and demo data on first startup.
+- Backend applies its PostgreSQL schema on startup; demo accounts are created only by explicit isolated test configuration.
 - If ports, schema, or env vars change, update README and this file together.
 - Paginated endpoints always share one envelope: `{ rows, total, page, pageSize }`.
-- `LIMIT`/`OFFSET` cannot be bound parameters (mysql2 sends numbers as DOUBLE, MySQL requires an integer).
-  They are parseInt'd, clamped, then string-interpolated — see `server/src/utils/pagination.js`.
+- `LIMIT`/`OFFSET` values are parsed, clamped, then string-interpolated — see `server/src/utils/pagination.js`.
 - Frontend lists all go through `usePagination` + `PagedTable` so every admin menu stays paginated.
 - `getUserMedia` needs a secure context. On `http://<LAN-IP>` `navigator.mediaDevices` is `undefined`
   and throws nothing. Android WebView must load `https://localhost` — see `docs/android-webview.md`.

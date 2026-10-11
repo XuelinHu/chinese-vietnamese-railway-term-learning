@@ -10,11 +10,12 @@ if (!/^[A-Za-z0-9_.-]{3,50}$/.test(username)) {
 }
 if (password.length < 12) throw new Error('ADMIN_PASSWORD must be at least 12 characters');
 
+const connection = await getPool().connect();
 let lockAcquired = false;
 try {
   await initializeDatabase({ seedDemoUsers: false });
-  const lock = await query("SELECT GET_LOCK('railway_term_learning_admin_bootstrap', 10) AS acquired");
-  lockAcquired = Number(lock[0].acquired) === 1;
+  const lock = await connection.query("SELECT pg_try_advisory_lock(hashtext('railway-term-admin-bootstrap')) AS acquired");
+  lockAcquired = lock.rows[0]?.acquired === true;
   if (!lockAcquired) throw new Error('Could not acquire the administrator bootstrap lock');
 
   const existing = await query(
@@ -34,6 +35,7 @@ try {
   );
   console.log(`Administrator '${username}' created.`);
 } finally {
-  if (lockAcquired) await query("SELECT RELEASE_LOCK('railway_term_learning_admin_bootstrap')");
+  if (lockAcquired) await connection.query("SELECT pg_advisory_unlock(hashtext('railway-term-admin-bootstrap'))");
+  connection.release();
   await getPool().end();
 }

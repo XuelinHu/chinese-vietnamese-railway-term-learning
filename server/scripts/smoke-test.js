@@ -194,8 +194,8 @@ async function main() {
   const stamp = Date.now();
   const tempUser = `smoke_${stamp}`;
   const tempEmail = `${tempUser}@example.com`;
-  const passwordA = 'smoke123456';
-  const passwordB = 'smoke654321';
+  const passwordA = 'Smoke-user-123!';
+  const passwordB = 'Smoke-user-654!';
 
   const registered = await http('/auth/register', {
     method: 'POST',

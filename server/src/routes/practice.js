@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authRequired, requireRole } from '../middleware/auth.js';
-import { query } from '../db/pool.js';
+import { query, withTransaction } from '../db/pool.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { getPagination, paged } from '../utils/pagination.js';
 import { logOperation } from '../services/audit.js';
@@ -64,8 +64,8 @@ practiceRouter.post('/start', asyncHandler(async (req, res) => {
   const allTerms = await query(
     `SELECT * FROM railway_term
      WHERE status = 'enabled'
-       AND (:categoryId IS NULL OR category_id = :categoryId)
-       AND (:difficulty IS NULL OR difficulty = :difficulty)`,
+       AND (CAST(:categoryId AS integer) IS NULL OR category_id = :categoryId)
+       AND (CAST(:difficulty AS text) IS NULL OR difficulty = :difficulty)`,
     { categoryId, difficulty }
   );
   const selected = shuffle(allTerms).slice(0, Number(count));
@@ -84,35 +84,39 @@ practiceRouter.post('/submit', asyncHandler(async (req, res) => {
     return { ...item, isCorrect };
   });
   const score = normalized.length ? Number(((correct / normalized.length) * 100).toFixed(2)) : 0;
-  const result = await query(
-    `INSERT INTO practice_record (user_id, practice_type, category_id, difficulty, total_count, correct_count, score, duration_seconds)
-     VALUES (:userId, :type, :categoryId, :difficulty, :total, :correct, :score, :durationSeconds)`,
-    { userId: req.user.id, type, categoryId, difficulty, total: normalized.length, correct, score, durationSeconds }
-  );
-  for (const answer of normalized) {
-    await query(
-      `INSERT INTO practice_answer (record_id, term_id, question_type, question_text, user_answer, correct_answer, is_correct)
-       VALUES (:recordId, :termId, :questionType, :questionText, :userAnswer, :correctAnswer, :isCorrect)`,
-      {
-        recordId: result.insertId,
-        termId: answer.termId,
-        questionType: answer.type,
-        questionText: answer.questionText,
-        userAnswer: answer.userAnswer,
-        correctAnswer: answer.correctAnswer,
-        isCorrect: answer.isCorrect ? 1 : 0
-      }
+  const recordId = await withTransaction(async (run) => {
+    const result = await run(
+      `INSERT INTO practice_record (user_id, practice_type, category_id, difficulty, total_count, correct_count, score, duration_seconds)
+       VALUES (:userId, :type, :categoryId, :difficulty, :total, :correct, :score, :durationSeconds)`,
+      { userId: req.user.id, type, categoryId, difficulty, total: normalized.length, correct, score, durationSeconds }
     );
-    if (!answer.isCorrect) {
-      await query(
-        `INSERT INTO wrong_question (user_id, term_id, wrong_count)
-         VALUES (:userId, :termId, 1)
-         ON DUPLICATE KEY UPDATE wrong_count = wrong_count + 1, last_wrong_at = CURRENT_TIMESTAMP`,
-        { userId: req.user.id, termId: answer.termId }
+    for (const answer of normalized) {
+      await run(
+        `INSERT INTO practice_answer (record_id, term_id, question_type, question_text, user_answer, correct_answer, is_correct)
+         VALUES (:recordId, :termId, :questionType, :questionText, :userAnswer, :correctAnswer, :isCorrect)`,
+        {
+          recordId: result.insertId,
+          termId: answer.termId,
+          questionType: answer.type,
+          questionText: answer.questionText,
+          userAnswer: answer.userAnswer,
+          correctAnswer: answer.correctAnswer,
+          isCorrect: answer.isCorrect ? 1 : 0
+        }
       );
+      if (!answer.isCorrect) {
+        await run(
+          `INSERT INTO wrong_question (user_id, term_id, wrong_count)
+           VALUES (:userId, :termId, 1)
+           ON CONFLICT (user_id, term_id) DO UPDATE
+             SET wrong_count = wrong_question.wrong_count + 1, last_wrong_at = now()`,
+          { userId: req.user.id, termId: answer.termId }
+        );
+      }
     }
-  }
-  res.json({ recordId: result.insertId, total: normalized.length, correct, score, answers: normalized });
+    return result.insertId;
+  });
+  res.json({ recordId, total: normalized.length, correct, score, answers: normalized });
 }));
 
 /**
@@ -130,12 +134,12 @@ practiceRouter.get('/records', asyncHandler(async (req, res) => {
   const to = req.query.to || null;
 
   const params = { userId, type, categoryId, from, to, keyword: `%${keyword}%`, limit, offset };
-  const where = `WHERE (:userId IS NULL OR r.user_id = :userId)
-       AND (:type IS NULL OR r.practice_type = :type)
-       AND (:categoryId IS NULL OR r.category_id = :categoryId)
-       AND (:from IS NULL OR r.created_at >= :from)
-       AND (:to IS NULL OR r.created_at <= :to)
-       AND (:keyword = '%%' OR u.username LIKE :keyword OR u.real_name LIKE :keyword)`;
+  const where = `WHERE (CAST(:userId AS integer) IS NULL OR r.user_id = :userId)
+       AND (CAST(:type AS text) IS NULL OR r.practice_type = :type)
+       AND (CAST(:categoryId AS integer) IS NULL OR r.category_id = :categoryId)
+       AND (CAST(:from AS timestamptz) IS NULL OR r.created_at >= :from)
+       AND (CAST(:to AS timestamptz) IS NULL OR r.created_at <= :to)
+       AND (:keyword = '%%' OR u.username ILIKE :keyword OR u.real_name ILIKE :keyword)`;
 
   const total = await query(
     `SELECT COUNT(*) AS count FROM practice_record r JOIN sys_user u ON u.id = r.user_id ${where}`,
@@ -189,10 +193,10 @@ practiceRouter.get('/wrong-questions', asyncHandler(async (req, res) => {
   const categoryId = req.query.categoryId ? Number(req.query.categoryId) : null;
 
   const params = { userId, categoryId, keyword: `%${keyword}%`, limit, offset };
-  const where = `WHERE (:userId IS NULL OR w.user_id = :userId)
-       AND (:categoryId IS NULL OR t.category_id = :categoryId)
-       AND (:keyword = '%%' OR t.term_zh LIKE :keyword OR t.term_vi LIKE :keyword
-            OR t.term_en LIKE :keyword OR u.username LIKE :keyword)`;
+  const where = `WHERE (CAST(:userId AS integer) IS NULL OR w.user_id = :userId)
+       AND (CAST(:categoryId AS integer) IS NULL OR t.category_id = :categoryId)
+       AND (:keyword = '%%' OR t.term_zh ILIKE :keyword OR t.term_vi ILIKE :keyword
+            OR t.term_en ILIKE :keyword OR u.username ILIKE :keyword)`;
 
   const total = await query(
     `SELECT COUNT(*) AS count FROM wrong_question w
@@ -234,10 +238,10 @@ practiceRouter.get('/favorites', asyncHandler(async (req, res) => {
   const categoryId = req.query.categoryId ? Number(req.query.categoryId) : null;
 
   const params = { userId, categoryId, keyword: `%${keyword}%`, limit, offset };
-  const where = `WHERE (:userId IS NULL OR f.user_id = :userId)
-       AND (:categoryId IS NULL OR t.category_id = :categoryId)
-       AND (:keyword = '%%' OR t.term_zh LIKE :keyword OR t.term_vi LIKE :keyword
-            OR t.term_en LIKE :keyword OR u.username LIKE :keyword)`;
+  const where = `WHERE (CAST(:userId AS integer) IS NULL OR f.user_id = :userId)
+       AND (CAST(:categoryId AS integer) IS NULL OR t.category_id = :categoryId)
+       AND (:keyword = '%%' OR t.term_zh ILIKE :keyword OR t.term_vi ILIKE :keyword
+            OR t.term_en ILIKE :keyword OR u.username ILIKE :keyword)`;
 
   const total = await query(
     `SELECT COUNT(*) AS count FROM favorite_term f

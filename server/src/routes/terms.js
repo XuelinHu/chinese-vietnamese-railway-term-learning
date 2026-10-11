@@ -21,8 +21,8 @@ termsRouter.get('/categories', asyncHandler(async (req, res) => {
   const keyword = (req.query.keyword || '').trim();
   const status = req.query.status || null;
   const params = { keyword: `%${keyword}%`, status, limit, offset };
-  const where = `WHERE (:status IS NULL OR status = :status)
-       AND (:keyword = '%%' OR name_zh LIKE :keyword OR name_en LIKE :keyword OR name_vi LIKE :keyword)`;
+  const where = `WHERE (CAST(:status AS text) IS NULL OR status = :status)
+       AND (:keyword = '%%' OR name_zh ILIKE :keyword OR name_en ILIKE :keyword OR name_vi ILIKE :keyword)`;
 
   const total = await query(`SELECT COUNT(*) AS count FROM term_category ${where}`, params);
   const rows = await query(
@@ -91,11 +91,11 @@ function buildTermFilter(q) {
       difficulty: q.difficulty || null,
       status: q.status || null
     },
-    where: `WHERE (:categoryId IS NULL OR t.category_id = :categoryId)
-       AND (:difficulty IS NULL OR t.difficulty = :difficulty)
-       AND (:status IS NULL OR t.status = :status)
-       AND (:keyword = '%%' OR t.term_zh LIKE :keyword OR t.term_en LIKE :keyword
-            OR t.term_vi LIKE :keyword OR t.pinyin LIKE :keyword)`
+    where: `WHERE (CAST(:categoryId AS integer) IS NULL OR t.category_id = :categoryId)
+       AND (CAST(:difficulty AS text) IS NULL OR t.difficulty = :difficulty)
+       AND (CAST(:status AS text) IS NULL OR t.status = :status)
+       AND (:keyword = '%%' OR t.term_zh ILIKE :keyword OR t.term_en ILIKE :keyword
+            OR t.term_vi ILIKE :keyword OR t.pinyin ILIKE :keyword)`
   };
 }
 
@@ -159,13 +159,18 @@ termsRouter.put('/:id', editor, asyncHandler(async (req, res) => {
 }));
 
 termsRouter.delete('/:id', editor, asyncHandler(async (req, res) => {
-  await query('DELETE FROM railway_term WHERE id = :id', { id: req.params.id });
+  try {
+    await query('DELETE FROM railway_term WHERE id = :id', { id: req.params.id });
+  } catch (error) {
+    if (error.code === '23503') return res.status(409).json({ message: '该术语已被练习记录引用，无法删除' });
+    throw error;
+  }
   await logOperation({ req, module: 'terms', action: 'delete', detail: `删除术语 id=${req.params.id}` });
   res.json({ message: 'ok' });
 }));
 
 termsRouter.post('/:id/favorite', asyncHandler(async (req, res) => {
-  await query('INSERT IGNORE INTO favorite_term (user_id, term_id) VALUES (:userId, :termId)', {
+  await query('INSERT INTO favorite_term (user_id, term_id) VALUES (:userId, :termId) ON CONFLICT (user_id, term_id) DO NOTHING', {
     userId: req.user.id, termId: req.params.id
   });
   res.json({ message: 'ok' });

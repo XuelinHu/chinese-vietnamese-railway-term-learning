@@ -84,12 +84,12 @@ analysisRouter.get('/dashboard', requireRole('admin', 'teacher'), asyncHandler(a
         (SELECT COALESCE(ROUND(AVG(score),2),0) FROM practice_record) AS avg_score,
         (SELECT COUNT(*) FROM agent_session) AS agent_sessions,
         (SELECT COUNT(*) FROM agent_message) AS agent_messages,
-        (SELECT COUNT(*) FROM sys_login_log WHERE created_at >= DATE_SUB(NOW(), INTERVAL ${days} DAY)) AS recent_logins`),
+        (SELECT COUNT(*) FROM sys_login_log WHERE created_at >= now() - (${days} * INTERVAL '1 day')) AS recent_logins`),
     query(`SELECT DATE(created_at) AS date, COUNT(*) AS count
-           FROM sys_user WHERE created_at >= DATE_SUB(NOW(), INTERVAL ${days} DAY)
+           FROM sys_user WHERE created_at >= now() - (${days} * INTERVAL '1 day')
            GROUP BY DATE(created_at) ORDER BY date`),
     query(`SELECT DATE(created_at) AS date, COUNT(*) AS count, COALESCE(ROUND(AVG(score),2),0) AS score
-           FROM practice_record WHERE created_at >= DATE_SUB(NOW(), INTERVAL ${days} DAY)
+           FROM practice_record WHERE created_at >= now() - (${days} * INTERVAL '1 day')
            GROUP BY DATE(created_at) ORDER BY date`),
     query(`SELECT c.name_zh, c.name_en, c.name_vi, COUNT(t.id) AS term_count
            FROM term_category c LEFT JOIN railway_term t ON t.category_id = c.id
@@ -100,7 +100,7 @@ analysisRouter.get('/dashboard', requireRole('admin', 'teacher'), asyncHandler(a
     query(`SELECT DATE(m.created_at) AS date, COUNT(*) AS count,
                   COALESCE(SUM(m.tokens),0) AS tokens
            FROM agent_message m WHERE m.role = 'assistant'
-             AND m.created_at >= DATE_SUB(NOW(), INTERVAL ${days} DAY)
+             AND m.created_at >= now() - (${days} * INTERVAL '1 day')
            GROUP BY DATE(m.created_at) ORDER BY date`),
     query(`SELECT r.code, r.name_zh, COUNT(u.id) AS user_count
            FROM sys_role r LEFT JOIN sys_user u ON u.role_id = r.id

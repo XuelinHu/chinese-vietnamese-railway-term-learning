@@ -2,6 +2,10 @@ import bcrypt from 'bcryptjs';
 import { initializeDatabase } from '../src/db/init.js';
 import { getPool, query } from '../src/db/pool.js';
 
+if (!process.env.PGDATABASE?.endsWith('_test') || process.env.ALLOW_DEMO_SEED !== '1') {
+  throw new Error('Test data seeding requires PGDATABASE ending in _test and ALLOW_DEMO_SEED=1.');
+}
+
 const MIN_ROWS = 100;
 
 const zhTerms = ['铁路', '车站', '钢轨', '道岔', '机车', '客车', '信号机', '闭塞', '调度命令', '列车运行图'];
@@ -22,8 +26,8 @@ async function count(table) {
 async function ensureRoles() {
   for (let i = 1; i <= MIN_ROWS; i += 1) {
     await query(
-      `INSERT IGNORE INTO sys_role (code, name_zh, name_en, name_vi)
-       VALUES (:code, :zh, :en, :vi)`,
+      `INSERT INTO sys_role (code, name_zh, name_en, name_vi)
+       VALUES (:code, :zh, :en, :vi) ON CONFLICT (code) DO NOTHING`,
       {
         code: `role_${pad(i)}`,
         zh: `测试角色${pad(i)}`,
@@ -39,8 +43,8 @@ async function ensureUsers() {
   const roles = await query('SELECT id FROM sys_role ORDER BY id LIMIT 100');
   for (let i = 1; i <= MIN_ROWS; i += 1) {
     await query(
-      `INSERT IGNORE INTO sys_user (username, password_hash, real_name, email, role_id, status)
-       VALUES (:username, :hash, :realName, :email, :roleId, 'enabled')`,
+      `INSERT INTO sys_user (username, password_hash, real_name, email, role_id, status)
+       VALUES (:username, :hash, :realName, :email, :roleId, 'enabled') ON CONFLICT (username) DO NOTHING`,
       {
         username: `test_user_${pad(i)}`,
         hash,
@@ -56,7 +60,7 @@ async function ensureCategories() {
   for (let i = 1; i <= MIN_ROWS; i += 1) {
     await query(
       `INSERT INTO term_category (name_zh, name_en, name_vi, sort_order, status)
-       SELECT :zh, :en, :vi, :sortOrder, 'enabled'
+       SELECT CAST(:zh AS varchar(100)), CAST(:en AS varchar(100)), CAST(:vi AS varchar(100)), :sortOrder, 'enabled'
        WHERE NOT EXISTS (SELECT 1 FROM term_category WHERE name_zh = :zh)`,
       {
         zh: `测试分类${pad(i)}`,
@@ -76,7 +80,7 @@ async function ensureTerms() {
       `INSERT INTO railway_term
        (category_id, term_zh, term_en, term_vi, pinyin, difficulty, definition_zh, definition_en, definition_vi,
         example_zh, example_en, example_vi, status, created_by)
-       SELECT :categoryId, :zh, :en, :vi, :pinyin, :difficulty, :defZh, :defEn, :defVi, :exZh, :exEn, :exVi, 'enabled', 1
+       SELECT :categoryId, CAST(:zh AS varchar(160)), :en, :vi, :pinyin, :difficulty, :defZh, :defEn, :defVi, :exZh, :exEn, :exVi, 'enabled', 1
        WHERE NOT EXISTS (SELECT 1 FROM railway_term WHERE term_zh = :zh)`,
       {
         categoryId: categories[(i - 1) % categories.length].id,
@@ -182,8 +186,8 @@ async function ensureWrongQuestions() {
   const terms = await query('SELECT id FROM railway_term ORDER BY id LIMIT 100');
   for (let i = 1; i <= MIN_ROWS; i += 1) {
     await query(
-      `INSERT IGNORE INTO wrong_question (user_id, term_id, wrong_count)
-       VALUES (:userId, :termId, :wrongCount)`,
+      `INSERT INTO wrong_question (user_id, term_id, wrong_count)
+       VALUES (:userId, :termId, :wrongCount) ON CONFLICT (user_id, term_id) DO NOTHING`,
       {
         userId: ((i - 1) % MIN_ROWS) + 1,
         termId: terms[(i - 1) % terms.length].id,
@@ -197,8 +201,8 @@ async function ensureFavorites() {
   const terms = await query('SELECT id FROM railway_term ORDER BY id LIMIT 100');
   for (let i = 1; i <= MIN_ROWS; i += 1) {
     await query(
-      `INSERT IGNORE INTO favorite_term (user_id, term_id)
-       VALUES (:userId, :termId)`,
+      `INSERT INTO favorite_term (user_id, term_id)
+       VALUES (:userId, :termId) ON CONFLICT (user_id, term_id) DO NOTHING`,
       {
         userId: ((i - 1) % MIN_ROWS) + 1,
         termId: terms[(MIN_ROWS - i) % terms.length].id

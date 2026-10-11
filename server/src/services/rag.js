@@ -57,22 +57,21 @@ export async function retrieve(question, limit = 5) {
       `(CASE WHEN t.term_zh = :${key} THEN 20 ELSE 0 END
       + CASE WHEN t.term_vi = :${key} THEN 20 ELSE 0 END
       + CASE WHEN t.term_en = :${key} THEN 20 ELSE 0 END
-      + CASE WHEN t.term_zh LIKE :${key} THEN 6 ELSE 0 END
-      + CASE WHEN t.term_vi LIKE :${key} THEN 6 ELSE 0 END
-      + CASE WHEN t.term_en LIKE :${key} THEN 6 ELSE 0 END
-      + CASE WHEN t.pinyin LIKE :${key} THEN 3 ELSE 0 END
-      + CASE WHEN t.definition_zh LIKE :${key} THEN 1 ELSE 0 END
-      + CASE WHEN t.definition_vi LIKE :${key} THEN 1 ELSE 0 END
-      + CASE WHEN t.definition_en LIKE :${key} THEN 1 ELSE 0 END)`
+      + CASE WHEN t.term_zh ILIKE :${key} THEN 6 ELSE 0 END
+      + CASE WHEN t.term_vi ILIKE :${key} THEN 6 ELSE 0 END
+      + CASE WHEN t.term_en ILIKE :${key} THEN 6 ELSE 0 END
+      + CASE WHEN t.pinyin ILIKE :${key} THEN 3 ELSE 0 END
+      + CASE WHEN t.definition_zh ILIKE :${key} THEN 1 ELSE 0 END
+      + CASE WHEN t.definition_vi ILIKE :${key} THEN 1 ELSE 0 END
+      + CASE WHEN t.definition_en ILIKE :${key} THEN 1 ELSE 0 END)`
     );
     whereParts.push(
-      `(t.term_zh LIKE :${key} OR t.term_vi LIKE :${key} OR t.term_en LIKE :${key}
-        OR t.pinyin LIKE :${key} OR t.definition_zh LIKE :${key}
-        OR t.definition_vi LIKE :${key} OR t.definition_en LIKE :${key})`
+      `(t.term_zh ILIKE :${key} OR t.term_vi ILIKE :${key} OR t.term_en ILIKE :${key}
+        OR t.pinyin ILIKE :${key} OR t.definition_zh ILIKE :${key}
+        OR t.definition_vi ILIKE :${key} OR t.definition_en ILIKE :${key})`
     );
   });
-  // LIMIT 不能用绑定参数：mysql2 以 DOUBLE 发送数字，而 MySQL 的 LIMIT 要求整数类型，
-  // 会抛 "Incorrect arguments to mysqld_stmt_execute"。这里强制取整后再拼接。
+  // LIMIT is interpolated only after the value has been parsed and clamped above.
   const safeLimit = Math.min(Math.max(Number.parseInt(limit, 10) || 5, 1), 50);
 
   const rows = await query(
