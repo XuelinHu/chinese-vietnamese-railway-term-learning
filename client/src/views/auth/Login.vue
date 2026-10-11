@@ -72,7 +72,6 @@ async function onSubmit() {
         <RouterLink to="/register">{{ tr('registerNow') }}</RouterLink>
       </div>
 
-      <p class="hint">admin/admin123 · teacher/teacher123 · student/student123</p>
     </section>
   </main>
 </template>
