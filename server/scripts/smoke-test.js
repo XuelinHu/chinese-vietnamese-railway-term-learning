@@ -114,7 +114,7 @@ async function main() {
   const term = await http('/terms', {
     method: 'POST',
     body: {
-      category_id: categories[0].id,
+      category_id: categories.rows[0].id,
       term_zh: `接口测试术语${Date.now()}`,
       term_en: 'api test term',
       term_vi: 'thuật ngữ kiểm thử api',
@@ -132,7 +132,7 @@ async function main() {
   await http(`/terms/${term.id}`, {
     method: 'PUT',
     body: {
-      category_id: categories[0].id,
+      category_id: categories.rows[0].id,
       term_zh: `接口测试术语更新${Date.now()}`,
       term_en: 'api test term updated',
       term_vi: 'thuật ngữ kiểm thử api cập nhật',
@@ -315,7 +315,7 @@ async function main() {
   const batchTerm = await http('/terms', {
     method: 'POST',
     body: {
-      category_id: categories[0].id,
+      category_id: categories.rows[0].id,
       term_zh: `冒烟批量术语${stamp}`,
       term_en: 'smoke batch term',
       term_vi: 'thuật ngữ hàng loạt',
