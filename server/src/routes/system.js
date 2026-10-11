@@ -124,9 +124,14 @@ systemRouter.get('/roles', staff, asyncHandler(async (req, res) => {
   res.json(paged(rows, total[0].count, page, pageSize));
 }));
 
-/** 下拉用的全量角色（不分页）。 */
+/** 分页查询角色选项，供用户管理表单使用。 */
 systemRouter.get('/roles/options', staff, asyncHandler(async (req, res) => {
-  res.json(await query('SELECT id, code, name_zh, name_en, name_vi FROM sys_role ORDER BY id'));
+  const { page, pageSize, limit, offset } = getPagination(req.query);
+  const total = await query('SELECT COUNT(*) AS count FROM sys_role');
+  const rows = await query(
+    `SELECT id, code, name_zh, name_en, name_vi FROM sys_role ORDER BY id LIMIT ${limit} OFFSET ${offset}`
+  );
+  res.json(paged(rows, total[0].count, page, pageSize));
 }));
 
 systemRouter.post('/roles', adminOnly, validateBody(z.object({

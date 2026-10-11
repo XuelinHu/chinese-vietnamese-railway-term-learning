@@ -264,7 +264,16 @@ async function main() {
 
   // 新建一个教师账号，验证「按角色下发菜单」而不是写死
   const teacherName = `smoke_t_${stamp}`;
-  const studentRoleId = (await http('/system/roles/options', {}, token)).find((r) => r.code === 'student').id;
+  const rolesOptionsPage = await http('/system/roles/options', {}, token);
+  assertPage(rolesOptionsPage, 1, 10, 100, 'role options default pagination');
+  const rolesOptionsPage2 = await http('/system/roles/options?page=2&pageSize=10', {}, token);
+  assertPage(rolesOptionsPage2, 2, 10, 100, 'role options pagination');
+  assert(
+    !rolesOptionsPage.rows.some((row) => rolesOptionsPage2.rows.some((other) => row.id === other.id)),
+    'role options pages overlap'
+  );
+  const availableRoles = rolesOptionsPage.rows;
+  const studentRoleId = availableRoles.find((r) => r.code === 'student').id;
   const teacher = await http('/system/users', {
     method: 'POST',
     body: {
@@ -273,7 +282,7 @@ async function main() {
       realName: '冒烟教师',
       email: `${teacherName}@example.com`,
       phone: '',
-      roleId: (await http('/system/roles/options', {}, token)).find((r) => r.code === 'teacher').id,
+      roleId: availableRoles.find((r) => r.code === 'teacher').id,
       status: 'enabled'
     }
   }, token);
@@ -303,8 +312,7 @@ async function main() {
   assert(Array.isArray(menuTree) && menuTree.length > 0, 'menu tree empty');
   assert(menuTree.some((node) => Array.isArray(node.children) && node.children.length), 'menu tree has no children');
 
-  const rolesOptions = await http('/system/roles/options', {}, token);
-  const studentRole = rolesOptions.find((r) => r.code === 'student');
+  const studentRole = availableRoles.find((r) => r.code === 'student');
   const grantedMenus = await http(`/system/roles/${studentRole.id}/menus`, {}, token);
   assert(Array.isArray(grantedMenus.menuIds) && grantedMenus.menuIds.length > 0, 'student role has no menus granted');
 

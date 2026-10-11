@@ -1,6 +1,6 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue';
-import { del, get, post, put } from '../../api/http';
+import { del, get, getAllPages, post, put } from '../../api/http';
 import { useAuth } from '../../composables/useAuth';
 import { useI18n } from '../../composables/useI18n';
 import { usePagination } from '../../composables/usePagination';
@@ -55,7 +55,7 @@ onMounted(async () => {
 
 async function loadRoles() {
   try {
-    roles.value = await get('/system/roles/options');
+    roles.value = await getAllPages('/system/roles/options');
   } catch (err) {
     toast.error(err.message);
   }
