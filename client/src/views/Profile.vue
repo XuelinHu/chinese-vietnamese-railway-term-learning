@@ -2,6 +2,7 @@
 import { onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { get, put, qs } from '../api/http';
+import { startOidc } from '../api/oidc';
 import { useAuth } from '../composables/useAuth';
 import { useI18n } from '../composables/useI18n';
 import { usePagination } from '../composables/usePagination';
@@ -17,6 +18,8 @@ const router = useRouter();
 const activeTab = ref('info');
 const savingProfile = ref(false);
 const savingPassword = ref(false);
+const oidcLinked = ref(false);
+const oidcLoading = ref(false);
 
 const profileForm = reactive({ realName: '', email: '', phone: '' });
 const passwordForm = reactive({ oldPassword: '', newPassword: '', confirmPassword: '' });
@@ -40,7 +43,23 @@ onMounted(async () => {
     toast.error(err.message);
   }
   await loadMyLogs();
+  try {
+    const identity = await get('/auth/oidc/status');
+    oidcLinked.value = identity.linked;
+  } catch (err) {
+    toast.error(err.message);
+  }
 });
+
+async function linkOidc() {
+  oidcLoading.value = true;
+  try {
+    await startOidc('link');
+  } catch (err) {
+    toast.error(err.message);
+    oidcLoading.value = false;
+  }
+}
 
 /**
  * 「我的登录记录」直接复用登录日志接口的 keyword 过滤，
@@ -138,6 +157,12 @@ const roleLabel = () => {
           {{ savingProfile ? tr('loading') : tr('save') }}
         </button>
       </form>
+      <div class="identity-link">
+        <p>{{ oidcLinked ? tr('oidcLinked') : tr('oidcNotLinked') }}</p>
+        <button v-if="!oidcLinked" class="sso-button" type="button" :disabled="oidcLoading" @click="linkOidc">
+          {{ oidcLoading ? tr('loading') : tr('oidcLink') }}
+        </button>
+      </div>
     </section>
 
     <section v-else-if="activeTab === 'password'" class="panel narrow">
@@ -211,5 +236,27 @@ const roleLabel = () => {
   color: #8593a1;
   font-size: 0.78rem;
   font-weight: 500;
+}
+
+.identity-link {
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid #d9e2e8;
+}
+
+.identity-link p {
+  margin: 0 0 10px;
+  color: #607080;
+}
+
+.sso-button {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid #0f766e;
+  border-radius: 6px;
+  background: #fff;
+  color: #0f766e;
+  font: inherit;
+  cursor: pointer;
 }
 </style>

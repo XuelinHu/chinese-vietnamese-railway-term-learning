@@ -20,6 +20,12 @@ const routes = [
     meta: { public: true, titleKey: 'login' }
   },
   {
+    path: '/oidc/callback',
+    name: 'oidc-callback',
+    component: () => import('../views/auth/OidcCallback.vue'),
+    meta: { public: true, titleKey: 'login' }
+  },
+  {
     path: '/register',
     name: 'register',
     component: () => import('../views/auth/Register.vue'),

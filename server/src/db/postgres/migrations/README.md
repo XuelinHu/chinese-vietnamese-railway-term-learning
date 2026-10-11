@@ -7,3 +7,7 @@ The runner applies files in lexical version order, under a per-database PostgreS
 Each migration and its SHA-256 ledger row commit in one transaction. Startup stops on checksum drift
 or a database ledger version that has no source file. Migrations must be safe for the project's
 already-existing data; put explicit conflict/orphan checks before adding constraints.
+
+`002_oidc_identity.sql` adds the nullable Keycloak subject and a partial unique index. Existing users
+must explicitly link their local account; do not match or merge accounts by username or email.
+Use `npm run db:migrate --workspace server` to apply schema migrations without rerunning business-data initialization.

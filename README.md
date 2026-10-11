@@ -5,6 +5,7 @@
   <img height="20" alt="Vite 6.0.7" src="https://img.shields.io/badge/vite-6.0.7-646CFF" />
   <img height="20" alt="Express 4.21.2" src="https://img.shields.io/badge/express-4.21.2-000000" />
   <img height="20" alt="PostgreSQL 18" src="https://img.shields.io/badge/PostgreSQL-18-4169E1" />
+  <img height="20" alt="OIDC jose 6.2.12" src="https://img.shields.io/badge/OIDC-jose%206.2.12-4B32C3" />
   <img height="20" alt="License GPL-2.0" src="https://img.shields.io/badge/license-GPL--2.0-3DA639" />
 </p>
 
@@ -15,7 +16,7 @@ H5 前端 + Node.js 后台 + PostgreSQL 数据库 + 本地大模型/语音边车
 ## 功能范围
 
 - 三语言界面：中文、English、Tiếng Việt
-- **完整用户全流程**：注册、登录、改密码、找回密码（邮箱验证码）、个人中心
+- **完整用户全流程**：注册、本地与统一 OIDC 登录、显式绑定、改密码、找回密码（邮箱验证码）、个人中心
 - 专业术语学习：分类浏览、三语对照、收藏、难度筛选
 - 练习平台：按分类/难度生成单选、判断、填空、翻译练习
 - 数据分析：学习次数、正确率、错题、高频错误术语、分类统计
@@ -61,11 +62,13 @@ H5 应用由 Android WebView 承载，语音有两条路径：默认走 WebView 
 复制 `server/.env.example` 为 `server/.env` 后按本机情况修改（`.env` 已被 gitignore，不要提交真实口令）。
 开发环境缺少 `JWT_SECRET` 时会为本次进程生成随机密钥，重启后旧 token 失效；生产环境必须显式配置。
 
-生产环境必须设置至少 16 位数据库密码、至少 32 位随机 `JWT_SECRET`，并配置 SMTP；缺少任一项后端会拒绝启动。
+生产环境必须设置至少 16 位数据库密码、至少 32 位随机 `JWT_SECRET`，并配置 SMTP；缺少任一项后端会拒绝启动。统一身份配置由 `OIDC_ISSUER` 与 `OIDC_CLIENT_ID` 控制。使用 LAN 开发 Keycloak 时，启动 API 的 Node 进程需通过 `NODE_EXTRA_CA_CERTS` 信任 `identity-service/tls/front-dev-ca.crt`；HTTPS 代理环境设置 `OIDC_COOKIE_SECURE=1`。
 生产环境不会自动创建弱口令演示用户。首次部署时，通过受控的密钥注入设置 `ADMIN_USERNAME`（3-50 位字母/数字/点/下划线/连字符）和
 `ADMIN_PASSWORD`（至少 12 位），再于 server workspace 执行 `npm run admin:create`。该命令仅在当前库尚无管理员时成功，密码只存 bcrypt 哈希。
 
 先由 PostgreSQL 管理员在目标实例运行 `server/src/db/postgres/provision-role.psql`，创建本项目专属数据库和受限运行角色；然后在 `server/.env` 设置 `PGHOST`、`PGPORT`、`PGUSER=railway_term_learning_app`、独立 `PGPASSWORD` 和 `PGDATABASE`。同名数据库若所有者不符，脚本会先停止，不自动改动其所有权。应用只连接配置的数据库，不会创建数据库，也不要求超级用户。Schema 基线位于 `server/src/db/postgres/schema.sql`，版本记录在 `schema_migrations`；后续结构改动应新增不可变迁移。迁移通过 PostgreSQL advisory lock 串行执行，并校验 SHA-256 checksum。Windows 本机 PostgreSQL 18 示例：
+
+OIDC 迁移 `002_oidc_identity.sql` 为 `sys_user` 增加唯一 subject 映射。用户需先登录本项目账号后主动绑定；不按用户名或邮箱自动合并。授权码 + PKCE 的交换、ID token 的 JWKS/issuer/audience/nonce 校验均在后端执行，前端只保存本项目 JWT。应用数据库结构升级可单独执行 `npm run db:migrate --workspace server`，不会重复运行初始化种子。
 
 ```powershell
 $pgAdmin = Read-Host 'PostgreSQL 管理员角色'

@@ -60,6 +60,10 @@ export const messages = {
     // ---- 认证 ----
     welcome: '欢迎回来',
     loginSubtitle: '登录后继续你的铁道术语学习',
+    oidcLogin: '使用统一账号登录',
+    oidcLink: '绑定统一账号',
+    oidcLinked: '已绑定统一账号',
+    oidcNotLinked: '尚未绑定统一账号',
     register: '注册账号',
     registerNow: '还没有账号？立即注册',
     haveAccount: '已有账号？去登录',
@@ -313,6 +317,10 @@ export const messages = {
 
     welcome: 'Welcome back',
     loginSubtitle: 'Sign in to continue learning railway terminology',
+    oidcLogin: 'Sign in with unified account',
+    oidcLink: 'Link unified account',
+    oidcLinked: 'Unified account linked',
+    oidcNotLinked: 'No unified account linked',
     register: 'Sign up',
     registerNow: "Don't have an account? Sign up",
     haveAccount: 'Already have an account? Sign in',
@@ -564,6 +572,10 @@ export const messages = {
 
     welcome: 'Chào mừng trở lại',
     loginSubtitle: 'Đăng nhập để tiếp tục học thuật ngữ đường sắt',
+    oidcLogin: 'Đăng nhập bằng tài khoản chung',
+    oidcLink: 'Liên kết tài khoản chung',
+    oidcLinked: 'Đã liên kết tài khoản chung',
+    oidcNotLinked: 'Chưa liên kết tài khoản chung',
     register: 'Đăng ký',
     registerNow: 'Chưa có tài khoản? Đăng ký ngay',
     haveAccount: 'Đã có tài khoản? Đăng nhập',
