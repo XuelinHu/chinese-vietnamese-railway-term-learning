@@ -59,9 +59,14 @@ H5 应用由 Android WebView 承载，语音有两条路径：默认走 WebView 
 ## 配置
 
 复制 `server/.env.example` 为 `server/.env` 后按本机情况修改（`.env` 已被 gitignore，不要提交真实口令）。
-除数据库与 JWT 外，其余均可留空——留空时对应能力自动降级，不会阻塞启动。
+开发环境缺少 `JWT_SECRET` 时会为本次进程生成随机密钥，重启后旧 token 失效；生产环境必须显式配置。
 
-首次启动后端会自动创建数据表和演示数据。请先确保 MySQL 已启动，并且 `root` 账号允许从本机连接。
+生产环境必须设置至少 16 位数据库密码、至少 32 位随机 `JWT_SECRET`，并配置 SMTP；缺少任一项后端会拒绝启动。
+生产环境不会自动创建 `admin/admin123` 等演示用户。首次部署时，通过受控的密钥注入设置 `ADMIN_USERNAME`（3-50 位字母/数字/点/下划线/连字符）和
+`ADMIN_PASSWORD`（至少 12 位），再于 server workspace 执行 `npm run admin:create`。该命令仅在当前库尚无管理员时成功，密码只存 bcrypt 哈希。
+
+开发/测试环境首次启动后端会自动创建数据表和演示数据。生产环境不播种演示账号；请先确保 MySQL 已启动，并配置专用数据库账号。
+Schema 版本记录在 `schema_migrations`。现有数据库首次升级会幂等登记 `001_initial_schema`；后续结构改动需追加新版本，不得改写已登记版本。迁移通过 MySQL advisory lock 串行执行，并校验 SHA-256 checksum。
 
 ## 启动
 
@@ -112,6 +117,10 @@ HF_ENDPOINT=https://hf-mirror.com npm run dev:ai
 ```bash
 npm run smoke        # 需要后端已启动；覆盖注册/改密/找回密码全流程、13 个分页菜单、智能体 SSE
 ```
+
+冒烟测试会在数据库中注册/删除账号、写入练习与日志，并依赖预置的 `admin/admin123`。
+请只对名称以 `_test` 结尾的隔离测试库启动后端并运行；不要连接日常或生产库。测试数据播种命令
+`npm run seed:test-data --workspace server` 也会写入大量分页样例数据。
 
 ## 文档
 

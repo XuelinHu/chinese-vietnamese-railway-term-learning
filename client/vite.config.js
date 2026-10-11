@@ -4,6 +4,7 @@ import vue from '@vitejs/plugin-vue';
 export default defineConfig({
   plugins: [vue()],
   server: {
+    host: '0.0.0.0',
     port: 4026,
     strictPort: true,
     proxy: {
@@ -11,6 +12,7 @@ export default defineConfig({
     }
   },
   preview: {
+    host: '0.0.0.0',
     port: 4026,
     strictPort: true,
     proxy: {

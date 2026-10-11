@@ -1,8 +1,12 @@
 import dotenv from 'dotenv';
+import { randomBytes } from 'node:crypto';
+import { assertDatabaseName, assertProductionConfig } from './validate-env.js';
 
 dotenv.config();
 
 const isProduction = process.env.NODE_ENV === 'production';
+assertProductionConfig(process.env);
+assertDatabaseName(process.env.DB_NAME || 'railway_term_learning');
 
 /** 读取整型环境变量并夹到合法区间，避免 NaN 流进 SQL（LIMIT 拼接处尤其危险）。 */
 const int = (value, fallback, min, max) => {
@@ -18,10 +22,10 @@ export const env = {
     host: process.env.DB_HOST || '127.0.0.1',
     port: Number(process.env.DB_PORT || 3306),
     user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || 'Java@c1024',
+    password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME || 'railway_term_learning'
   },
-  jwtSecret: process.env.JWT_SECRET || 'railway_term_learning_secret',
+  jwtSecret: process.env.JWT_SECRET || randomBytes(32).toString('hex'),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '8h',
 
   ollama: {

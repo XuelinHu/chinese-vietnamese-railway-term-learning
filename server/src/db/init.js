@@ -1,5 +1,9 @@
 import bcrypt from 'bcryptjs';
+import { createHash } from 'node:crypto';
 import { ensureDatabase, getPool, query } from './pool.js';
+import { applyMigrations } from './migrations.js';
+import { env } from '../config/env.js';
+import { shouldSeedDemoUsers } from './seed-policy.js';
 
 const schema = [
   `CREATE TABLE IF NOT EXISTS sys_role (
@@ -189,36 +193,61 @@ const schema = [
 // 而 MySQL 8.4 没有 ADD COLUMN IF NOT EXISTS，所以走 information_schema 探测。
 const IDENTIFIER = /^[a-z_][a-z0-9_]{0,63}$/;
 
-async function ensureColumn(table, column, ddl) {
+async function ensureColumn(table, column, ddl, queryFn) {
   // 标识符无法用占位符绑定，只能拼接 —— 因此必须白名单校验，否则是注入面。
   // query() 走的是 pool.execute() 预编译，容易给人虚假的安全感，但 DDL 段并未参数化。
   if (!IDENTIFIER.test(table) || !IDENTIFIER.test(column)) {
     throw new Error(`Unsafe identifier in ensureColumn: ${table}.${column}`);
   }
-  const rows = await query(
+  const rows = await queryFn(
     `SELECT COUNT(*) AS count FROM information_schema.COLUMNS
      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :table AND COLUMN_NAME = :column`,
     { table, column }
   );
   if (rows[0].count === 0) {
     // ALGORITHM=INSTANT 避免重建表；列名/表名已校验，ddl 是代码内常量
-    await query(`ALTER TABLE \`${table}\` ADD COLUMN ${ddl}, ALGORITHM=INSTANT`);
+    await queryFn(`ALTER TABLE \`${table}\` ADD COLUMN ${ddl}, ALGORITHM=INSTANT`);
     console.log(`[db] added column ${table}.${column}`);
   }
 }
 
-async function migrateColumns() {
-  await ensureColumn('sys_user', 'phone', 'phone VARCHAR(30) NULL');
-  await ensureColumn('sys_user', 'avatar', 'avatar VARCHAR(255) NULL');
-  await ensureColumn('sys_user', 'remark', 'remark VARCHAR(255) NULL');
-  await ensureColumn('sys_user', 'last_login_at', 'last_login_at TIMESTAMP NULL');
-  await ensureColumn('sys_role', 'remark', 'remark VARCHAR(255) NULL');
-  await ensureColumn('sys_operation_log', 'username', 'username VARCHAR(50) NULL');
-  await ensureColumn('sys_operation_log', 'ip', 'ip VARCHAR(80) NULL');
-  await ensureColumn('sys_operation_log', 'method', 'method VARCHAR(10) NULL');
-  await ensureColumn('sys_operation_log', 'path', 'path VARCHAR(160) NULL');
-  await ensureColumn('sys_operation_log', 'status', 'status INT NULL');
-  await ensureColumn('sys_operation_log', 'duration_ms', 'duration_ms INT NULL');
+const legacyColumns = [
+  ['sys_user', 'phone', 'phone VARCHAR(30) NULL'],
+  ['sys_user', 'avatar', 'avatar VARCHAR(255) NULL'],
+  ['sys_user', 'remark', 'remark VARCHAR(255) NULL'],
+  ['sys_user', 'last_login_at', 'last_login_at TIMESTAMP NULL'],
+  ['sys_role', 'remark', 'remark VARCHAR(255) NULL'],
+  ['sys_operation_log', 'username', 'username VARCHAR(50) NULL'],
+  ['sys_operation_log', 'ip', 'ip VARCHAR(80) NULL'],
+  ['sys_operation_log', 'method', 'method VARCHAR(10) NULL'],
+  ['sys_operation_log', 'path', 'path VARCHAR(160) NULL'],
+  ['sys_operation_log', 'status', 'status INT NULL'],
+  ['sys_operation_log', 'duration_ms', 'duration_ms INT NULL']
+];
+
+async function migrateColumns(queryFn) {
+  for (const [table, column, ddl] of legacyColumns) {
+    await ensureColumn(table, column, ddl, queryFn);
+  }
+}
+
+const initialMigrationChecksum = createHash('sha256')
+  .update([...schema, ...legacyColumns.map(([table, column, ddl]) => `${table}.${column}:${ddl}`)].join('\n'))
+  .digest('hex');
+
+const migrations = [{
+  version: '001_initial_schema',
+  description: 'Initial railway terminology learning schema and legacy columns',
+  checksum: initialMigrationChecksum,
+  async up(queryFn) {
+    for (const sql of schema) await queryFn(sql);
+    await migrateColumns(queryFn);
+  }
+}];
+
+async function migrateSchema() {
+  const lockName = `railway-terms-${createHash('sha256').update(env.db.database).digest('hex').slice(0, 32)}`;
+  await applyMigrations({ pool: getPool(), query, migrations, lockName });
 }
 
 const categories = [
@@ -351,13 +380,9 @@ async function seedModelCatalog() {
   console.log(`[db] seeded ${modelCatalog.length} model catalog entries`);
 }
 
-export async function initializeDatabase() {
+export async function initializeDatabase({ seedDemoUsers = shouldSeedDemoUsers(env.isProduction) } = {}) {
   await ensureDatabase();
-  const pool = getPool();
-  for (const sql of schema) await pool.query(sql);
-
-  // 老库补齐新列必须在种子数据之前，否则后续 INSERT 会因缺列失败
-  await migrateColumns();
+  await migrateSchema();
 
   const roleCount = await query('SELECT COUNT(*) AS count FROM sys_role');
   if (roleCount[0].count === 0) {
@@ -368,7 +393,7 @@ export async function initializeDatabase() {
   }
 
   const userCount = await query('SELECT COUNT(*) AS count FROM sys_user');
-  if (userCount[0].count === 0) {
+  if (userCount[0].count === 0 && seedDemoUsers) {
     const adminHash = await bcrypt.hash('admin123', 10);
     const teacherHash = await bcrypt.hash('teacher123', 10);
     const studentHash = await bcrypt.hash('student123', 10);

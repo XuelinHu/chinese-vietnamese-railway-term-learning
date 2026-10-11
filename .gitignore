@@ -6,3 +6,9 @@ dist/
 .tmp/
 # 本地 Claude Code 配置
 .claude/
+
+/android/.gradle/
+/android/local.properties
+/android/app/build/
+/android/build/
+/dist/*.apk

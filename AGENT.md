@@ -25,6 +25,8 @@
 - Keep real passwords only in local `.env`; do not commit credentials.
 - Schema changes on an existing database must go through `ensureColumn()` in `server/src/db/init.js` —
   `CREATE TABLE IF NOT EXISTS` cannot add columns, and MySQL 8.4 has no `ADD COLUMN IF NOT EXISTS`.
+- Schema versions are tracked in `schema_migrations`; append a new immutable migration in `server/src/db/init.js`
+  for future changes. The runner uses a MySQL advisory lock and rejects checksum drift.
 
 ## External services
 
