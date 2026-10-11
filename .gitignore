@@ -6,6 +6,7 @@ dist/
 .tmp/
 # 本地 Claude Code 配置
 .claude/
+server/backups/
 
 /android/.gradle/
 /android/local.properties

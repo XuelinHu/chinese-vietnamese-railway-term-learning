@@ -8,7 +8,11 @@
     "start": "node src/index.js",
     "seed:test-data": "node scripts/seed-test-data.js",
     "admin:create": "node scripts/create-admin.js",
+    "db:init": "node scripts/init-db.js",
     "test": "node --test test/runtime-config.test.js",
+    "test:backup": "node --test test/database-snapshot.test.js",
+    "db:backup": "node scripts/database-snapshot.js backup",
+    "db:restore": "node scripts/database-snapshot.js restore",
     "test:smoke": "node scripts/smoke-test.js"
   },
   "dependencies": {

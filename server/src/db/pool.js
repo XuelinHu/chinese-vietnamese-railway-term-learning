@@ -32,3 +32,10 @@ export async function query(sql, params = {}) {
   const [rows] = await getPool().execute(sql, params);
   return rows;
 }
+
+export async function closePool() {
+  if (!pool) return;
+  const current = pool;
+  pool = undefined;
+  await current.end();
+}

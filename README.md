@@ -68,6 +68,24 @@ H5 应用由 Android WebView 承载，语音有两条路径：默认走 WebView 
 开发/测试环境首次启动后端会自动创建数据表和演示数据。生产环境不播种演示账号；请先确保 MySQL 已启动，并配置专用数据库账号。
 Schema 版本记录在 `schema_migrations`。现有数据库首次升级会幂等登记 `001_initial_schema`；后续结构改动需追加新版本，不得改写已登记版本。迁移通过 MySQL advisory lock 串行执行，并校验 SHA-256 checksum。
 
+### 数据库备份与恢复
+
+后端提供 MySQL 一致性快照，使用 gzip + AES-256-GCM 加密；需在 `server/.env` 配置独立 `DB_BACKUP_ENCRYPTION_KEY`（32 字节，即 64 位十六进制），密钥必须保存在密码管理器和本机 `.env`，不能提交或丢失。备份默认写入 `server/backups/`，不会覆盖已有文件。快照绑定汉越铁路项目标识，不能作为其他项目的恢复源。
+
+```powershell
+cd server
+node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"  # 将输出写入 server/.env
+npm run db:backup
+```
+
+恢复只允许 `DB_NAME` 以 `_test` 结尾，并要求显式 `--replace`；目标库必须先按相同版本完成 `db:init` 和迁移。建议先恢复到隔离测试库验证，再制定生产恢复操作。
+
+```powershell
+cd server
+$env:DB_NAME = 'railway_restore_test'
+npm run db:restore -- --source .\backups\snapshot.rvlbak --replace
+```
+
 ## 启动
 
 ```bash
