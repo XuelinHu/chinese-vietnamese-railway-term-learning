@@ -15,15 +15,8 @@ const editor = requireRole('admin', 'teacher');
 
 /* ------------------------------ 术语分类 ------------------------------ */
 
-/**
- * 分页查询分类。不带 page/pageSize 时返回全量数组，
- * 保持与既有前端下拉、冒烟测试的兼容。
- */
+/** 分页查询分类。 */
 termsRouter.get('/categories', asyncHandler(async (req, res) => {
-  if (!req.query.page && !req.query.pageSize) {
-    const rows = await query('SELECT * FROM term_category ORDER BY sort_order, id');
-    return res.json(rows);
-  }
   const { page, pageSize, limit, offset } = getPagination(req.query);
   const keyword = (req.query.keyword || '').trim();
   const status = req.query.status || null;
@@ -41,9 +34,14 @@ termsRouter.get('/categories', asyncHandler(async (req, res) => {
   res.json(paged(rows, total[0].count, page, pageSize));
 }));
 
-/** 下拉用的全量分类。 */
+/** 分页查询启用分类，供下拉选项使用。 */
 termsRouter.get('/categories/options', asyncHandler(async (req, res) => {
-  res.json(await query("SELECT id, name_zh, name_en, name_vi FROM term_category WHERE status = 'enabled' ORDER BY sort_order, id"));
+  const { page, pageSize, limit, offset } = getPagination(req.query);
+  const total = await query("SELECT COUNT(*) AS count FROM term_category WHERE status = 'enabled'");
+  const rows = await query(
+    "SELECT id, name_zh, name_en, name_vi FROM term_category WHERE status = 'enabled' ORDER BY sort_order, id LIMIT " + limit + ' OFFSET ' + offset
+  );
+  res.json(paged(rows, total[0].count, page, pageSize));
 }));
 
 termsRouter.post('/categories', editor, validateBody(z.object({

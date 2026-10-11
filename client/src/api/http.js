@@ -58,6 +58,17 @@ export const post = (path, body) => request(path, { method: 'POST', body });
 export const put = (path, body) => request(path, { method: 'PUT', body });
 export const del = (path) => request(path, { method: 'DELETE' });
 
+export async function getAllPages(path, pageSize = 100) {
+  const first = await get(`${path}?page=1&pageSize=${pageSize}`);
+  const rows = [...(first.rows || [])];
+  const pages = Math.ceil(first.total / first.pageSize);
+  for (let page = 2; page <= pages; page += 1) {
+    const data = await get(`${path}?page=${page}&pageSize=${pageSize}`);
+    rows.push(...(data.rows || []));
+  }
+  return rows;
+}
+
 /** 把对象拼成查询串，跳过空值——分页/筛选接口统一用它，避免手写 URLSearchParams。 */
 export function qs(params = {}) {
   const search = new URLSearchParams();

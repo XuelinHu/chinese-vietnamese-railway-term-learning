@@ -82,7 +82,10 @@ async function main() {
   const categoryPage = await http('/terms/categories?page=2&pageSize=10', {}, token);
   assertPage(categoryPage, 2, 10, 100, 'categories pagination');
   const categories = await http('/terms/categories', {}, token);
-  assert(categories.length >= 100, 'category rows below 100');
+  assertPage(categories, 1, 10, 100, 'categories default pagination');
+  const categoryOptions = await http('/terms/categories/options?page=1&pageSize=10', {}, token);
+  assertPage(categoryOptions, 1, 10, 100, 'category options pagination');
+  assert(categoryOptions.rows.every((row) => row.id && row.name_zh), 'category options fields missing');
 
   const category = await http('/terms/categories', {
     method: 'POST',

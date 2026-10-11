@@ -1,6 +1,6 @@
 <script setup>
 import { onMounted, ref } from 'vue';
-import { del, get, post } from '../api/http';
+import { del, get, getAllPages, post } from '../api/http';
 import { useI18n } from '../composables/useI18n';
 import { usePagination } from '../composables/usePagination';
 import { useToast } from '../composables/useToast';
@@ -34,8 +34,7 @@ const difficultyLabel = (value) => tr(value) || value;
 
 onMounted(async () => {
   try {
-    // 下拉框用 options 接口：categories 在带 page 参数时返回分页信封，不带才是数组，容易踩坑。
-    categories.value = await get('/terms/categories/options');
+    categories.value = await getAllPages('/terms/categories/options');
   } catch (err) {
     toast.error(err.message);
   }

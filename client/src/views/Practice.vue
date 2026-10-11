@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue';
-import { get, post } from '../api/http';
+import { get, getAllPages, post } from '../api/http';
 import { useI18n } from '../composables/useI18n';
 import { useToast } from '../composables/useToast';
 import { speak } from '../voice';
@@ -28,7 +28,7 @@ const answeredCount = computed(() => Object.values(answers).filter((v) => String
 
 onMounted(async () => {
   try {
-    categories.value = await get('/terms/categories/options');
+    categories.value = await getAllPages('/terms/categories/options');
   } catch (err) {
     toast.error(err.message);
   }

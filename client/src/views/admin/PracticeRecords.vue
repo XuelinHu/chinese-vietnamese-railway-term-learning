@@ -1,6 +1,6 @@
 <script setup>
 import { onMounted, ref } from 'vue';
-import { del, get } from '../../api/http';
+import { del, get, getAllPages } from '../../api/http';
 import { useI18n } from '../../composables/useI18n';
 import { usePagination } from '../../composables/usePagination';
 import { useToast } from '../../composables/useToast';
@@ -47,7 +47,7 @@ const answerColumns = [
 onMounted(async () => {
   await list.load();
   try {
-    categories.value = await get('/terms/categories/options');
+    categories.value = await getAllPages('/terms/categories/options');
   } catch {
     categories.value = [];
   }

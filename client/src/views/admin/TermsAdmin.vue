@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue';
-import { del, get, post, put } from '../../api/http';
+import { del, get, getAllPages, post, put } from '../../api/http';
 import { useAuth } from '../../composables/useAuth';
 import { useI18n } from '../../composables/useI18n';
 import { usePagination } from '../../composables/usePagination';
@@ -67,7 +67,7 @@ onMounted(async () => {
 
 async function loadCategories() {
   try {
-    categories.value = await get('/terms/categories/options');
+    categories.value = await getAllPages('/terms/categories/options');
   } catch (err) {
     toast.error(err.message);
   }
